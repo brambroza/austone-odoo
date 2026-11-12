@@ -76,8 +76,8 @@ export default function PrivacyPage() {
       </Section>
 
       <Section n={8} title="ติดต่อเรา">
-        <p>{SITE.legalName}<br />{SITE.address}<br />อีเมล <a href={`mailto:${email}`} className="text-[var(--lp-accent)] underline">{email}</a> · โทร {SITE.phone} · LINE {SITE.lineId} ({SITE.businessHours})</p>
-        <p>เมื่อมีการเปลี่ยนแปลงนโยบาย เราจะประกาศบนหน้านี้พร้อมวันที่ปรับปรุง อ่าน <Link href="/terms" className="text-[var(--lp-accent)] underline">เงื่อนไขการใช้งาน</Link> ประกอบ</p>
+        <p>{SITE.legalName}<br />{SITE.address}<br />อีเมล <a href={`mailto:${email}`} className="text-[var(--lp-accent-ink)] underline">{email}</a> · โทร {SITE.phone} · LINE {SITE.lineId} ({SITE.businessHours})</p>
+        <p>เมื่อมีการเปลี่ยนแปลงนโยบาย เราจะประกาศบนหน้านี้พร้อมวันที่ปรับปรุง อ่าน <Link href="/terms" className="text-[var(--lp-accent-ink)] underline">เงื่อนไขการใช้งาน</Link> ประกอบ</p>
       </Section>
     </>
   );

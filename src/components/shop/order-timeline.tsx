@@ -34,7 +34,7 @@ function OrderStepper({ order, currentIndex }: { order: ProtoOrder; currentIndex
               )}>
                 {done ? <Check className="size-4" /> : <span className="text-[11px] font-semibold">{index + 1}</span>}
               </span>
-              <span className={cn('mt-1.5 px-0.5 text-[11px] leading-tight', isCurrent ? 'font-bold text-primary' : done ? 'font-medium' : 'text-muted-foreground')}>{ORDER_STATUS_LABELS[status]}</span>
+              <span className={cn('mt-1.5 px-0.5 text-[11px] leading-tight', isCurrent ? 'font-bold text-primary-ink' : done ? 'font-medium' : 'text-muted-foreground')}>{ORDER_STATUS_LABELS[status]}</span>
               {event && <span className="mt-0.5 text-[10px] leading-tight text-muted-foreground">{fmtShort(event.at)}</span>}
             </li>
           );

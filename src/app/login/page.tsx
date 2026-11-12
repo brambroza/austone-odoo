@@ -32,10 +32,10 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="mt-6 text-center text-sm text-[var(--lp-muted)]">
-          ยังไม่มีบัญชี? <Link href="/#register" className="text-[var(--lp-accent)] underline-offset-2 hover:underline">สมัครเป็นดีลเลอร์</Link>
+          ยังไม่มีบัญชี? <Link href="/#register" className="text-[var(--lp-accent-ink)] underline-offset-2 hover:underline">สมัครเป็นดีลเลอร์</Link>
         </p>
         <p className="mt-2 text-center text-sm text-[var(--lp-muted)]">
-          เป็นลูกค้าเราอยู่แล้ว? <Link href="/activate" className="text-[var(--lp-accent)] underline-offset-2 hover:underline">เปิดใช้บัญชีลูกค้าเดิม</Link>
+          เป็นลูกค้าเราอยู่แล้ว? <Link href="/activate" className="text-[var(--lp-accent-ink)] underline-offset-2 hover:underline">เปิดใช้บัญชีลูกค้าเดิม</Link>
         </p>
       </main>
     </div>

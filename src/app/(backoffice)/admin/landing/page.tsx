@@ -16,7 +16,11 @@ import { resetLandingSectionAction, saveLandingSectionAction } from '../landing-
 
 const PATH = '/admin/landing';
 /** Artwork shipped in public/landing, always offered in the image picker. */
-const SHIPPED_IMAGES = ['hero-tall', 'hero-wide', 'car-wide', 'car-tall', 'moto-wide', 'moto-tall', 'battery-wide', 'battery-tall'].map((n) => `/landing/${n}.webp`);
+/** Austone artwork shipped with the site (from austone-thailand-coltd.odoo.com), offered before older stock images. */
+const SHIPPED_IMAGES = [
+  ...['racing-wide', 'racing-tall', 'promo-luggage-wide', 'promo-luggage-tall', 'quality-wide', 'quality-tall', 'warranty-pcr-120', 'warranty-tbr-100'].map((n) => `/landing/austone/${n}.webp`),
+  ...['hero-tall', 'hero-wide', 'car-wide', 'car-tall', 'moto-wide', 'moto-tall', 'battery-wide', 'battery-tall'].map((n) => `/landing/${n}.webp`),
+];
 /** Blank rows offered at the end of a variable list so admins can add entries without JavaScript. */
 const BLANK_ROWS = 2;
 const fmt = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' });

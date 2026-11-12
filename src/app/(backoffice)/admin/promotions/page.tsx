@@ -18,7 +18,7 @@ import { deletePromotionAction, savePromotionAction } from '../promotion-actions
 
 const PATH = '/admin/promotions';
 /** Banner images shipped with the site (public/landing). */
-const IMAGES = ['/landing/car-wide.webp', '/landing/moto-wide.webp', '/landing/battery-wide.webp', '/landing/hero-wide.webp'];
+const IMAGES = ['/landing/austone/promo-luggage-wide.webp', '/landing/austone/racing-wide.webp', '/landing/austone/quality-wide.webp', '/landing/car-wide.webp', '/landing/hero-wide.webp'];
 const fmt = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' });
 const today = () => new Date().toISOString().slice(0, 10);
 

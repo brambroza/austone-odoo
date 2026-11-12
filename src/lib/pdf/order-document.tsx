@@ -6,16 +6,17 @@ import { ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS, type ProtoOrder } from '@/l
 const money = (n: number) => `${n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const date = (iso: string) => new Date(iso).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
 
-const RED = '#d9342b';
+const BRAND_INK = '#1b1319';
+const BRAND_YELLOW = '#f5e400';
 const s = StyleSheet.create({
   page: { fontFamily: 'Sarabun', fontSize: 10, paddingTop: 36, paddingBottom: 48, paddingHorizontal: 40, color: '#1f1f1f' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
-  brand: { fontSize: 18, fontWeight: 700, color: RED },
+  brand: { fontSize: 18, fontWeight: 700, color: BRAND_INK },
   company: { fontSize: 9, color: '#555', marginTop: 2, maxWidth: 300, lineHeight: 1.4 },
   docTitle: { fontSize: 16, fontWeight: 700, textAlign: 'right' },
   meta: { fontSize: 9, color: '#555', textAlign: 'right', marginTop: 2 },
-  badge: { marginTop: 6, alignSelf: 'flex-end', backgroundColor: '#fde8e6', color: RED, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8, fontSize: 9, fontWeight: 700 },
-  rule: { height: 2, backgroundColor: RED, marginBottom: 14 },
+  badge: { marginTop: 6, alignSelf: 'flex-end', backgroundColor: BRAND_YELLOW, color: BRAND_INK, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8, fontSize: 9, fontWeight: 700 },
+  rule: { height: 2, backgroundColor: BRAND_YELLOW, marginBottom: 14 },
   cols: { flexDirection: 'row', gap: 16, marginBottom: 14 },
   box: { flex: 1, borderWidth: 1, borderColor: '#e5e5e5', borderRadius: 6, padding: 10 },
   boxTitle: { fontSize: 9, fontWeight: 700, color: '#777', marginBottom: 4, textTransform: 'uppercase' },

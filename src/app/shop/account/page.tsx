@@ -132,7 +132,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="font-semibold">{baht(inv.amountResidual)}</span>
-                        {inv.id && inv.orderId && <a href={`/api/orders/${inv.orderId}/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="text-xs text-primary underline">PDF</a>}
+                        {inv.id && inv.orderId && <a href={`/api/orders/${inv.orderId}/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="text-xs text-primary-ink underline">PDF</a>}
                         {inv.orderId
                           ? <Link href={`/shop/orders/${inv.orderId}#credit-payment`} className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">ชำระ</Link>
                           : <span className="text-[11px] text-muted-foreground">บิลจาก Odoo · ชำระกับฝ่ายบัญชี</span>}

@@ -152,13 +152,13 @@ export default async function OrderDetailPage({ params, searchParams }: { params
             <span>ใบแจ้งหนี้ <span className="font-medium text-foreground">{inv.name}</span>
             {inv.amountResidual > 0 ? ` · ค้างชำระ ${baht(inv.amountResidual)}` : ' · ชำระครบแล้ว'}
             {inv.amountResidual > 0 && inv.dueDate ? ` · ครบกำหนด ${new Date(inv.dueDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}` : ''}</span>
-            {inv.id && <a href={`/api/orders/${order.id}/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline"><FileText className="size-3.5" /> ใบกำกับภาษี PDF</a>}
+            {inv.id && <a href={`/api/orders/${order.id}/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-ink underline"><FileText className="size-3.5" /> ใบกำกับภาษี PDF</a>}
           </p>
         ))}
         {order.odoo?.saleOrderId && order.status !== 'CANCELLED' && (
           <form action={requestTaxInvoiceAction} className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
             <input type="hidden" name="orderId" value={order.id} />
-            ไม่เห็นไฟล์ใบกำกับภาษี หรือต้องการสำเนา? <button type="submit" className="text-primary underline">ขอใบกำกับภาษีจากบัญชี</button>
+            ไม่เห็นไฟล์ใบกำกับภาษี หรือต้องการสำเนา? <button type="submit" className="text-primary-ink underline">ขอใบกำกับภาษีจากบัญชี</button>
           </form>
         )}
         {error && !payCredit && !(order.status === 'PENDING' && order.paymentMethod === 'CASH') && <p className="mt-2 text-xs text-destructive">{error}</p>}
@@ -170,7 +170,7 @@ export default async function OrderDetailPage({ params, searchParams }: { params
           {order.lines.map((line) => (
             <li key={`${line.productId}-${line.unitId ?? 'base'}`} className="flex items-start justify-between gap-3 py-2 text-sm">
               <div className="min-w-0 flex-1">
-                {line.size && <span className="mr-2 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">{line.size}</span>}
+                {line.size && <span className="mr-2 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary-ink">{line.size}</span>}
                 <span className="break-words">{line.name}</span>
                 <p className="text-xs text-muted-foreground">{line.unitName && line.unitQty ? `${line.unitQty} ${line.unitName} (${line.qty})` : line.qty} × {baht(line.unitPrice)}</p>
               </div>

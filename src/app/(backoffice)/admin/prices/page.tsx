@@ -112,7 +112,7 @@ export default async function PricesPage({ searchParams }: { searchParams: Promi
           key={book.id}
           size="xl"
           title={`${zone.name} · ${book.tier} ${DEALER_TIER_LABELS[book.tier]}`}
-          description={<>จะเผยแพร่เป็น pricelist ชื่อ <span className="font-mono">{pricelistNameFor(zone, book)}</span> · {zone.isDefault ? 'ใช้กับจังหวัดที่ไม่ถูกจัดโซน' : zone.provinces.map(shortProvince).join(', ')} · <a href={`/api/admin/export/prices?book=${book.id}&format=xlsx`} className="text-primary underline">ส่งออก Excel</a> · <a href={`/api/admin/export/prices?book=${book.id}&format=csv`} className="text-primary underline">CSV</a></>}
+          description={<>จะเผยแพร่เป็น pricelist ชื่อ <span className="font-mono">{pricelistNameFor(zone, book)}</span> · {zone.isDefault ? 'ใช้กับจังหวัดที่ไม่ถูกจัดโซน' : zone.provinces.map(shortProvince).join(', ')} · <a href={`/api/admin/export/prices?book=${book.id}&format=xlsx`} className="text-primary-ink underline">ส่งออก Excel</a> · <a href={`/api/admin/export/prices?book=${book.id}&format=csv`} className="text-primary-ink underline">CSV</a></>}
           closeHref={PATH}
         >
           <BookEditor book={book} zone={zone} catalog={catalog} type={type} query={query} params={params} />
@@ -278,7 +278,7 @@ function BookEditor({ book, zone, catalog, type, query, params }: {
                     <TableCell data-label="ราคาตั้ง (Odoo)" className="text-right text-muted-foreground tabular-nums">{baht(p.listPrice)}</TableCell>
                     <TableCell data-label={`ฐาน ${basePricelist?.name ?? ''}`} className="text-right text-muted-foreground tabular-nums">{baht(base)}</TableCell>
                     <TableCell data-label="ราคาคงที่ (กรอก)" className="text-right"><MoneyInput unstyled name={`price_${p.tmplId}`} defaultValue={entry} placeholder="—" aria-label={`ราคาคงที่ ${p.code}`} className="h-8 w-28 rounded-md border border-border bg-background px-2 text-right tabular-nums" /></TableCell>
-                    <TableCell data-label="ดีลเลอร์เห็น" className={cn('text-right font-semibold tabular-nums', entry !== undefined ? 'text-primary' : '')}>{baht(effective)}</TableCell>
+                    <TableCell data-label="ดีลเลอร์เห็น" className={cn('text-right font-semibold tabular-nums', entry !== undefined ? 'text-primary-ink' : '')}>{baht(effective)}</TableCell>
                   </TableRow>
                 );
               })}

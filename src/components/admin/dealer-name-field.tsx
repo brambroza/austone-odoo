@@ -56,7 +56,7 @@ export function DealerNameField({ existing, defaultValue, className }: { existin
           {matches.map((s) => (
             <li key={`${s.kind}-${s.href}`} role="option" aria-selected={false}>
               <Link href={s.href} scroll={false} className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent focus:bg-accent focus:outline-none">
-                {s.kind === 'dealer' ? <Store className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" /> : <Building2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                {s.kind === 'dealer' ? <Store className="mt-0.5 size-4 shrink-0 text-primary-ink" aria-hidden="true" /> : <Building2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{s.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">{s.kind === 'dealer' ? 'ดีลเลอร์บนเว็บ' : 'ลูกค้า Odoo ยังไม่มีบัญชีเว็บ'}{s.detail ? ` · ${s.detail}` : ''}</span>

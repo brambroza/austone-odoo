@@ -23,7 +23,7 @@ export function BottomNav({ cartCount }: { cartCount: number }) {
           const active = exact ? pathname === href : pathname.startsWith(href);
           return (
             <li key={href}>
-              <Link href={href} className={cn('relative flex flex-col items-center gap-0.5 py-2 text-[11px]', active ? 'text-primary font-semibold' : 'text-muted-foreground')}>
+              <Link href={href} className={cn('relative flex flex-col items-center gap-0.5 py-2 text-[11px]', active ? 'text-primary-ink font-semibold' : 'text-muted-foreground')}>
                 <Icon className="size-5" />
                 {label}
                 {href === '/shop/cart' && cartCount > 0 && (
@@ -48,7 +48,7 @@ export function TopNav({ cartCount }: { cartCount: number }) {
           const active = exact ? pathname === href : pathname.startsWith(href);
           return (
             <li key={href}>
-              <Link href={href} className={cn('relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm hover:bg-muted', active ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground')}>
+              <Link href={href} className={cn('relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm hover:bg-muted', active ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground')}>
                 <Icon className="size-4" />
                 {label}
                 {href === '/shop/cart' && cartCount > 0 && (

@@ -32,9 +32,9 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       )}
       <header className="sticky top-0 z-20 border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-4 px-4 md:h-16 md:max-w-6xl">
-          <Link href="/shop" className="flex shrink-0 items-center gap-2 font-bold" aria-label="12buy Dealer หน้าร้าน">
+          <Link href="/shop" className="flex shrink-0 items-center gap-2 font-bold" aria-label="Austone Dealer หน้าร้าน">
             <BrandLogo size={36} />
-            <span className="hidden sm:inline">12buy <span className="text-muted-foreground font-normal">Dealer</span></span>
+            <span className="hidden sm:inline">AUSTONE <span className="text-muted-foreground font-normal">Dealer</span></span>
           </Link>
           <TopNav cartCount={cartCount} />
           <div className="flex items-center gap-2">

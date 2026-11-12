@@ -33,7 +33,7 @@ export default async function PublicSearchPage({ searchParams }: { searchParams:
     <div id="catalog-top" className="space-y-5">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(crumbs)) }} />
       <Crumbs crumbs={crumbs} />
-      <h1 className="text-2xl font-extrabold tracking-tight">{query ? <>ยางขนาด <span className="font-mono text-[var(--lp-accent)]">{query}</span></> : 'ค้นหายางตามขนาด'}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight">{query ? <>ยางขนาด <span className="font-mono text-[var(--lp-accent-ink)]">{query}</span></> : 'ค้นหายางตามขนาด'}</h1>
       <SizeSearch initial={query} autoFocus={!query} basePath="/tires/search" />
       {!catalog ? <CatalogUnavailable /> : (
         <>

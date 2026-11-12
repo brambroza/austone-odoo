@@ -5,7 +5,7 @@
  */
 
 /**
- * A tyre brand shown on the landing. `code` is the Odoo category prefix (e.g. `YK-PCR` → `YK`)
+ * A tyre brand known to the catalog (logos for `/tires/brand/[code]` and product cards). `code` is the Odoo category prefix (e.g. `YK-PCR` → `YK`)
  * and links the tile to `/tires/brand/[code]`. `logo` is optional until the customer supplies licensed artwork.
  */
 export type Brand = { name: string; code?: string; logo?: string };
@@ -24,6 +24,9 @@ export const BRANDS: readonly Brand[] = [
   { name: 'Aonaite', code: 'AN' },
   { name: 'Kpatos', code: 'KT' },
 ];
+
+/** Brands featured on the public landing and in its JSON-LD: the site sells AUSTONE only. */
+export const LANDING_BRANDS: readonly Brand[] = [{ name: 'AUSTONE', logo: '/brand/austone-logo.webp' }];
 
 /** Logo path for a catalog brand code, when one of the landing brands matches. */
 export function brandLogo(code: string): string | undefined {
@@ -65,11 +68,31 @@ export function sizeLabelFromSlug(slug: string): string {
 
 /** Trust points under the hero. Copy must be confirmed with the customer before go-live. */
 export const TRUST_POINTS = [
-  { title: 'ส่งถึงร้านทั่วไทย', body: 'จัดส่ง 77 จังหวัด เลือกขนส่งเองได้ตอนยืนยันออเดอร์' },
+  { title: 'ตัวแทนจำหน่ายทั่วประเทศ', body: 'ผู้นำเข้ายาง AUSTONE รายเดียวในไทย จัดส่งถึงร้านดีลเลอร์ทั่วประเทศ' },
   { title: 'ใบกำกับภาษีทุกออเดอร์', body: 'เอกสารครบ ออกจากระบบบัญชีบริษัทโดยตรง' },
-  { title: 'เครดิตเทอมสำหรับดีลเลอร์', body: 'ดีลเลอร์ที่ผ่านการอนุมัติรับเงื่อนไขชำระเงินตามระดับร้าน' },
-  { title: 'เคลมตามเงื่อนไขผู้ผลิต', body: 'ประสานงานเคลมกับแบรนด์ให้ แจ้งผ่าน LINE ได้เลย' },
+  { title: 'เงื่อนไขสำหรับดีลเลอร์', body: 'ดีลเลอร์ที่ผ่านการอนุมัติรับเงื่อนไขชำระเงินตามระดับร้าน' },
+  { title: 'เคลมทันที ไม่มีเงื่อนไข*', body: 'รับประกันยางรถยนต์ 120 วัน ยางรถบรรทุก 100 วัน (*เงื่อนไขเป็นไปตามที่บริษัทกำหนด)' },
 ] as const;
+
+/** "About us" copy, verbatim from the Austone Thailand website. */
+export const ABOUT = {
+  heading: 'เกี่ยวกับ AUSTONE Thailand',
+  body: 'บริษัท ออสโตน (ไทยแลนด์) จำกัด ได้รับการแต่งตั้งเป็นตัวแทนจำหน่ายยาง AUSTONE เพียงรายเดียวในประเทศไทย โดยเริ่มนำเข้าสินค้าจากโรงงานผู้ผลิตเมื่อปี 2018 และได้ขยายฐานการตลาดมากขึ้น ในปี 2019 บริษัท ออสโตน (ไทยแลนด์) ได้ขยายสถานที่เก็บสินค้าเพิ่มขึ้นเพื่อรองรับความต้องการของลูกค้า และการขนส่งที่รวดเร็วมากขึ้น',
+  facts: [
+    { value: '2018', label: 'เริ่มนำเข้าจากโรงงานผู้ผลิต' },
+    { value: '2019', label: 'ขยายคลังสินค้า ส่งได้เร็วขึ้น' },
+    { value: '1', label: 'ตัวแทนจำหน่ายรายเดียวในไทย' },
+  ],
+} as const;
+
+/** Warranty programmes as published on the Austone Thailand website, with their posters. */
+export const WARRANTIES = [
+  { title: 'รับประกันยางรถยนต์ (PCR) 120 วัน', tag: 'เคลมทันที ไม่มีเงื่อนไข*', body: 'ซื้อยางและลงทะเบียนการรับประกันออนไลน์ รับประกันยาง 120 วัน', image: '/landing/austone/warranty-pcr-120.webp', alt: 'โปสเตอร์ AUSTONE เคลมทันที ไม่มีเงื่อนไข รับประกันยางรถยนต์ 120 วัน' },
+  { title: 'รับประกันยางรถบรรทุก (TBR) 100 วัน', tag: 'เคลมทันที ไม่มีเงื่อนไข*', body: 'ซื้อยางและลงทะเบียนการรับประกันออนไลน์ รับประกันยาง 100 วัน', image: '/landing/austone/warranty-tbr-100.webp', alt: 'โปสเตอร์ AUSTONE ยางรถบรรทุก รับประกัน 100 วัน เคลมทันที' },
+] as const;
+
+/** Footnote that must accompany every "no conditions" warranty claim. */
+export const WARRANTY_NOTE = '* เงื่อนไขเป็นไปตามที่บริษัทกำหนด';
 
 /**
  * Dealer testimonials. Entries marked `placeholder: true` are sample copy and are NOT rendered on the
@@ -91,11 +114,11 @@ export function publishedTestimonials(items: readonly Testimonial[] = TESTIMONIA
 /** Promotions shown on the landing. Dates are ISO strings so the card can hide expired items. */
 export type Promotion = { title: string; body: string; image: string; from: string; to: string; href: string };
 
-export const PROMOTIONS: readonly Promotion[] = [
-  { title: 'ยางรถยนต์ Yokohama · Michelin · Lanvigator', body: 'ราคาพิเศษดีลเลอร์ประจำเดือน เข้าสู่ระบบเพื่อดูราคาของร้าน', image: '/landing/car-wide.webp', from: '2026-10-01', to: '2026-12-31', href: '/tires?type=CAR' },
-  { title: 'ยางมอเตอร์ไซค์ IRC · Arisun · SR Moto', body: 'สั่งครบชุดรับเงื่อนไขพิเศษ สอบถามทีมขายทาง LINE', image: '/landing/moto-wide.webp', from: '2026-10-01', to: '2026-12-31', href: '/tires?type=MOTORCYCLE' },
-  { title: 'แบตเตอรี่ 3K · Camel Max · GS', body: 'แบตเตอรี่รถยนต์ครบทุกขนาด ส่งพร้อมยางในออเดอร์เดียว', image: '/landing/battery-wide.webp', from: '2026-10-01', to: '2026-12-31', href: '/tires?type=BATTERY' },
-];
+/**
+ * Coded fallback promotions (shown only until one is saved in /admin/promotions). Empty on purpose:
+ * Austone's current campaign is in the banners, and promotion dates must come from the customer.
+ */
+export const PROMOTIONS: readonly Promotion[] = [];
 
 /** True when a promotion is live on the given date (inclusive). */
 export function isPromotionActive(promo: Promotion, now = new Date()): boolean {
@@ -106,13 +129,13 @@ export function isPromotionActive(promo: Promotion, now = new Date()): boolean {
 /** FAQ shown on the landing and emitted as `FAQPage` JSON-LD. */
 export const FAQ = [
   { q: 'สั่งยางขั้นต่ำกี่เส้น', a: 'ไม่มีขั้นต่ำต่อออเดอร์ สั่ง 1 เส้นก็ได้ ระบบตั้งจำนวนเริ่มต้นเป็นชุด 2 หรือ 4 เส้นตามประเภทยาง ปรับได้ตามต้องการ' },
-  { q: 'เปิดร้านยางใหม่ ต้องสั่งยางที่ไหน', a: 'สมัครเป็นดีลเลอร์กับ 12buy Dealer ได้ฟรี เมื่ออนุมัติแล้วสั่งยางรถยนต์ ยางรถบรรทุก ยางมอเตอร์ไซค์ แบตเตอรี่ และกระทะล้อราคาส่งได้ในที่เดียว ไม่ต้องโทรหาซัพพลายเออร์หลายเจ้า' },
+  { q: 'AUSTONE คือยางของใคร ซื้อได้ที่ไหน', a: 'บริษัท ออสโตน (ไทยแลนด์) จำกัด เป็นตัวแทนจำหน่ายยาง AUSTONE เพียงรายเดียวในประเทศไทย นำเข้าจากโรงงานผู้ผลิตตั้งแต่ปี 2018 ร้านยางสมัครเป็นดีลเลอร์ได้ฟรีเพื่อสั่งยางรถยนต์ ยางรถบรรทุก และกระทะล้อ AUSTONE ราคาดีลเลอร์ผ่านระบบนี้' },
   { q: 'ยาง 195/65R15 ใส่รถอะไร', a: 'เป็นขนาดยอดนิยมของรถเก๋งขนาดกลาง เช่น Toyota Corolla Altis รุ่นก่อนปี 2014 และรถอีโคคาร์บางรุ่น ควรตรวจขนาดจริงที่แก้มยางเดิมหรือป้ายข้างประตูรถก่อนสั่ง' },
-  { q: 'ยางรถกระบะขนาดไหนนิยม', a: 'กระบะตัวเตี้ยนิยม 215/70R15 กระบะยกสูงและ PPV นิยม 245/70R16 และ 265/65R17 กระบะรุ่นใหม่ล้อ 18 นิ้วนิยม 265/60R18 ค้นด้วยขนาดในระบบเพื่อดูทุกยี่ห้อที่มีสต็อก' },
+  { q: 'ยางรถกระบะขนาดไหนนิยม', a: 'กระบะตัวเตี้ยนิยม 215/70R15 กระบะยกสูงและ PPV นิยม 245/70R16 และ 265/65R17 กระบะรุ่นใหม่ล้อ 18 นิ้วนิยม 265/60R18 ค้นด้วยขนาดในระบบเพื่อดูทุกรุ่นที่มีสต็อก' },
   { q: 'ส่งกี่วันถึง', a: 'สินค้าที่มีในคลังจัดส่งภายใน 1 วันทำการ กรุงเทพและปริมณฑลถึงใน 1-2 วัน ต่างจังหวัด 2-4 วันตามขนส่งที่เลือก' },
   { q: 'ส่งยางราคาส่งไปต่างจังหวัดได้ไหม', a: 'ส่งได้ทั้ง 77 จังหวัด ร้านยางในเชียงใหม่ ขอนแก่น หาดใหญ่ และจังหวัดอื่นสั่งราคาส่งได้เหมือนร้านในกรุงเทพ ค่าส่งและระยะเวลาขึ้นกับขนส่งที่ร้านได้รับ' },
   { q: 'ชำระเงินอย่างไร มีเครดิตเทอมไหม', a: 'โอนเงินแล้วแนบสลิปในระบบได้ทันที ดีลเลอร์ที่ผ่านการอนุมัติสามารถขอเครดิตเทอมได้ตามระดับร้าน' },
-  { q: 'เคลมยางทำอย่างไร', a: 'แจ้งเลขออเดอร์และรูปถ่ายผ่าน LINE ทีมงานประสานกับผู้ผลิตและแจ้งผลตามเงื่อนไขรับประกันของแต่ละแบรนด์' },
+  { q: 'รับประกันกี่วัน เคลมยางทำอย่างไร', a: 'ยางรถยนต์ (PCR) รับประกัน 120 วัน ยางรถบรรทุก (TBR) รับประกัน 100 วัน ซื้อยางแล้วลงทะเบียนการรับประกันออนไลน์ เคลมทันที ไม่มีเงื่อนไข* แจ้งเลขออเดอร์และรูปถ่ายผ่าน LINE (*เงื่อนไขเป็นไปตามที่บริษัทกำหนด)' },
   { q: 'สมัครเป็นดีลเลอร์ใช้เวลานานไหม', a: 'กรอกชื่อร้าน จังหวัด และหมวดสินค้าที่ขาย ทีมงานตรวจสอบและเปิดสิทธิ์ภายใน 1 วันทำการ ไม่มีค่าสมัคร' },
   { q: 'ออกใบกำกับภาษีได้ไหม', a: 'ได้ทุกออเดอร์ ระบบออกใบกำกับภาษีเต็มรูปแบบตามข้อมูลร้านที่ลงทะเบียนไว้' },
 ] as const;

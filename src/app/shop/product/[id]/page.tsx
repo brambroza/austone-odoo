@@ -65,7 +65,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <span>{DEALER_TYPE_LABELS[product.dealerType]}</span>·<span>{product.brand}</span>·<span className="font-mono">{product.code}</span>
         </div>
         <h1 className="text-xl font-bold md:text-2xl">{product.name}</h1>
-        {product.size && <p className="text-2xl font-black text-primary">{product.size.label}</p>}
+        {product.size && <p className="text-2xl font-black text-primary-ink">{product.size.label}</p>}
       </div>
 
       <PriceBox productId={product.id} unitPrice={unit} baseUnit={product.baseUnit} units={product.units} defaultQty={qty} stock={<StockBadge qty={product.qtyAvailable} />} soldOut={product.qtyAvailable <= 0} vatNote={vatLabel(product)} cashNote={cashNote} />

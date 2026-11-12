@@ -210,7 +210,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {all.length === 0 && <EmptyRow colSpan={9}>ยังไม่มีออเดอร์ — ลองสั่งจาก <Link href="/shop" className="text-primary">หน้าดีลเลอร์</Link></EmptyRow>}
+            {all.length === 0 && <EmptyRow colSpan={9}>ยังไม่มีออเดอร์ — ลองสั่งจาก <Link href="/shop" className="text-primary-ink">หน้าดีลเลอร์</Link></EmptyRow>}
             {all.length > 0 && orders.length === 0 && <EmptyRow colSpan={9}>ไม่พบออเดอร์ตามเงื่อนไข</EmptyRow>}
             {pageRows.items.map((o) => {
               const { next, cancellable, blocked } = orderFlow(o);

@@ -20,7 +20,7 @@ export function PublicProductCard({ product }: { product: PublicProduct }) {
       <div className="min-w-0 flex-1">
         <Link href={detail} className="block">
           <div className="flex flex-wrap items-center gap-1.5">
-            {product.size && <span className="rounded-md bg-[var(--lp-accent-soft)] px-1.5 py-0.5 font-mono text-xs font-bold text-[var(--lp-accent)]">{product.size.label}</span>}
+            {product.size && <span className="rounded-md bg-[var(--lp-accent-soft)] px-1.5 py-0.5 font-mono text-xs font-bold text-[var(--lp-accent-ink)]">{product.size.label}</span>}
             <span className="text-xs text-[var(--lp-muted)]">{product.brandName} · {product.typeLabel}</span>
           </div>
           <h3 className="mt-1 truncate text-sm font-semibold">{product.name}</h3>

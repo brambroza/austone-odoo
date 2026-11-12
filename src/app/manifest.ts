@@ -5,12 +5,12 @@ import { SITE } from '@/lib/seo';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE.name,
-    short_name: '12buy',
+    short_name: 'AUSTONE',
     description: SITE.description,
     start_url: '/shop',
     display: 'standalone',
-    background_color: '#fff7f7',
-    theme_color: '#d9342b',
+    background_color: '#ffffff',
+    theme_color: '#f5e400',
     lang: 'th',
     icons: [
       { src: '/icon', sizes: '512x512', type: 'image/png', purpose: 'any' },

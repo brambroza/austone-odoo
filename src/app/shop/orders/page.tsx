@@ -80,9 +80,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </div>
       {params.error && <p role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-300">{params.error}</p>}
       {all.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">ยังไม่มีออเดอร์ <Link href="/shop/search" className="text-primary underline">เริ่มค้นหาสินค้า</Link></p>
+        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">ยังไม่มีออเดอร์ <Link href="/shop/search" className="text-primary-ink underline">เริ่มค้นหาสินค้า</Link></p>
       ) : page.items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">ไม่พบออเดอร์ตามเงื่อนไขนี้ <Link href={PATH} className="text-primary underline">ดูทั้งหมด</Link></p>
+        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">ไม่พบออเดอร์ตามเงื่อนไขนี้ <Link href={PATH} className="text-primary-ink underline">ดูทั้งหมด</Link></p>
       ) : (
         page.items.map((order) => (
           <Link key={order.id} href={`/shop/orders/${order.id}`} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition hover:border-primary/40">

@@ -104,14 +104,14 @@ export default async function CommissionSalesPage({ searchParams }: { searchPara
                       <TableCell data-label="กลุ่มราคา" className={r.priceGroup === 'UNMAPPED' ? 'text-amber-700' : undefined}>{groupLabel(r.priceGroup)}</TableCell>
                       <TableCell data-label="กลุ่มสินค้า">{r.family}</TableCell>
                       <TableCell data-label="หน่วย" className="text-right tabular-nums">{r.qty.toLocaleString('th-TH')}</TableCell>
-                      <TableCell data-label="ยอดขาย" className="text-right font-semibold tabular-nums"><Link href={openHref(key(r))} scroll={false} title="ดูใบแจ้งหนี้" className="text-primary hover:underline">{baht(r.base)}</Link></TableCell>
+                      <TableCell data-label="ยอดขาย" className="text-right font-semibold tabular-nums"><Link href={openHref(key(r))} scroll={false} title="ดูใบแจ้งหนี้" className="text-primary-ink hover:underline">{baht(r.base)}</Link></TableCell>
                       <TableCell data-label="ราคาพิเศษ" className="text-right tabular-nums text-muted-foreground">{r.special ? baht(r.special) : '—'}</TableCell>
                       <TableCell data-label="ยอดเก็บ" className="text-right tabular-nums"><Link href={openHref(key(r))} scroll={false} title="ดูใบแจ้งหนี้" className="hover:underline">{baht(collectedBy.get(key(r))?.base ?? 0)}</Link></TableCell>
                     </TableRow>
                     {rows[i + 1]?.repName !== r.repName && (
                       <TableRow className="bg-muted/40">
                         <TableCell colSpan={4} className="text-right text-xs font-semibold">รวม {r.repName}</TableCell>
-                        <TableCell className="text-right font-bold tabular-nums"><Link href={openHref(repKey(r))} scroll={false} title="ดูใบแจ้งหนี้" className="text-primary hover:underline">{baht(subtotal.get(r.repName)?.base ?? 0)}</Link></TableCell>
+                        <TableCell className="text-right font-bold tabular-nums"><Link href={openHref(repKey(r))} scroll={false} title="ดูใบแจ้งหนี้" className="text-primary-ink hover:underline">{baht(subtotal.get(r.repName)?.base ?? 0)}</Link></TableCell>
                         <TableCell />
                         <TableCell className="text-right font-bold tabular-nums"><Link href={openHref(repKey(r))} scroll={false} title="ดูใบแจ้งหนี้" className="hover:underline">{baht(collectedSubtotal.get(r.repName)?.base ?? 0)}</Link></TableCell>
                       </TableRow>

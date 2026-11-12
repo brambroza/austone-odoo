@@ -18,7 +18,7 @@ export function LineLinkCard({ linked, linkedAt, configured, basicId, status }: 
         {linked ? (
           <>
             <p className="font-medium text-emerald-700 dark:text-emerald-400">เชื่อมแล้ว{linkedAt ? ` · ${new Date(linkedAt).toLocaleDateString('th-TH', { dateStyle: 'medium' })}` : ''}</p>
-            <p className="mt-1 text-muted-foreground">รับแจ้งเตือนเมื่อออเดอร์ได้รับการยืนยัน จัดส่ง วางบิล และชำระ {addFriend && <>ยังไม่ได้รับข้อความ? <a href={addFriend} target="_blank" rel="noreferrer" className="text-primary underline">เพิ่มเพื่อน {basicId}</a> ก่อน</>}</p>
+            <p className="mt-1 text-muted-foreground">รับแจ้งเตือนเมื่อออเดอร์ได้รับการยืนยัน จัดส่ง วางบิล และชำระ {addFriend && <>ยังไม่ได้รับข้อความ? <a href={addFriend} target="_blank" rel="noreferrer" className="text-primary-ink underline">เพิ่มเพื่อน {basicId}</a> ก่อน</>}</p>
             <form action={unlinkLineAction} className="mt-3"><Button type="submit" variant="outline" size="sm"><Unlink className="size-4" /> ยกเลิกการเชื่อม</Button></form>
           </>
         ) : (
@@ -26,7 +26,7 @@ export function LineLinkCard({ linked, linkedAt, configured, basicId, status }: 
             <p className="text-muted-foreground">รับแจ้งเตือนสถานะออเดอร์ทุกขั้นในแชท LINE ของคุณ กดปุ่มด้านล่างแล้วเข้าสู่ระบบ LINE หนึ่งครั้ง</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button nativeButton={false} render={<a href="/api/auth/line/start" />} size="sm" className="bg-[#06c755] text-white hover:bg-[#05b34c]" disabled={!configured}><MessageCircle className="size-4" /> เชื่อม LINE</Button>
-              {addFriend && <a href={addFriend} target="_blank" rel="noreferrer" className="text-xs text-primary underline">เพิ่มเพื่อน {basicId}</a>}
+              {addFriend && <a href={addFriend} target="_blank" rel="noreferrer" className="text-xs text-primary-ink underline">เพิ่มเพื่อน {basicId}</a>}
             </div>
             {!configured && <p className="mt-2 text-xs text-muted-foreground">ทีมงานยังไม่ได้เปิดใช้ LINE แจ้งเตือน (ตั้งค่าได้ที่หลังบ้าน → ตั้งค่า LINE)</p>}
           </>

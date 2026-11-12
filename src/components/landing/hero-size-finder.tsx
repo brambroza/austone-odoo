@@ -51,11 +51,11 @@ export function HeroSizeFinder({ basePath = '/tires/search' }: { basePath?: stri
           ค้นหายาง
         </button>
       </form>
-      {error && <p role="alert" className="mt-2 text-xs text-[var(--lp-accent)]">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-[var(--lp-accent-ink)]">{error}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <span className="text-xs text-[var(--lp-muted)]">ยอดนิยม</span>
         {POPULAR_SIZES.map((size) => (
-          <button key={size} type="button" onClick={() => { setValue(size); go(size); }} className="rounded-full border border-[var(--lp-line)] bg-white px-3 py-1 font-mono text-xs text-[var(--lp-fg)] transition hover:border-[var(--lp-accent)] hover:text-[var(--lp-accent)]">
+          <button key={size} type="button" onClick={() => { setValue(size); go(size); }} className="rounded-full border border-[var(--lp-line)] bg-white px-3 py-1 font-mono text-xs text-[var(--lp-fg)] transition hover:border-[var(--lp-accent)] hover:text-[var(--lp-accent-ink)]">
             {size}
           </button>
         ))}

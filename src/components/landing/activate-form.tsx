@@ -38,7 +38,7 @@ export function ActivateForm() {
         <legend className="text-sm font-medium">หมวดสินค้าที่ขาย</legend>
         <div className="mt-2 flex flex-wrap gap-2" aria-invalid={invalid('types')}>
           {TYPES.map(([value, text]) => (
-            <label key={value} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 text-sm has-[:checked]:border-[var(--lp-accent)] has-[:checked]:bg-[var(--lp-accent-soft)] has-[:checked]:text-[var(--lp-accent)]">
+            <label key={value} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 text-sm has-[:checked]:border-[var(--lp-accent)] has-[:checked]:bg-[var(--lp-accent-soft)] has-[:checked]:text-[var(--lp-accent-ink)]">
               <input type="checkbox" name="types" value={value} checked={types.includes(value)} onChange={() => toggle(value)} className="accent-[var(--lp-accent)]" /> {text}
             </label>
           ))}

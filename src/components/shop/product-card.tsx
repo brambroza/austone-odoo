@@ -17,7 +17,7 @@ export function ProductCard({ product, price, favorite = false }: { product: Cat
       <div className="min-w-0 flex-1 space-y-1.5">
         <Link href={`/shop/product/${product.id}`} className="block pr-10">
           <div className="flex items-center gap-2">
-            {product.size && <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">{product.size.label}</span>}
+            {product.size && <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary-ink">{product.size.label}</span>}
             <span className="text-xs text-muted-foreground">{product.brand}</span>
           </div>
           <p className="truncate text-sm font-medium">{product.name}</p>

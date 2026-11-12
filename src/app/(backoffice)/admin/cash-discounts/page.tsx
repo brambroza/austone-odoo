@@ -51,7 +51,7 @@ export default async function CashDiscountsPage({ searchParams }: { searchParams
       <div>
         <h1 className="text-2xl font-bold">ส่วนลดเงินสดรายสินค้า</h1>
         <p className="text-sm text-muted-foreground">สินค้าทั้งหมดจาก Odoo · ใช้กับดีลเลอร์ที่ติ๊ก “ลูกค้าเครดิต” แล้วเลือกจ่ายเงินสด แสดงเป็นส่วนลดท้ายบิลตอน checkout</p>
-        <p className="text-xs text-muted-foreground">ลำดับที่ใช้: % ที่ตั้งในข้อมูลดีลเลอร์ (ต่อกลุ่มสินค้า) → ค่าของสินค้าในหน้านี้ → % ของ pricelist และคู่ราคาที่ <Link href="/admin/prices?pairs=open" className="text-primary underline">ตารางราคา</Link></p>
+        <p className="text-xs text-muted-foreground">ลำดับที่ใช้: % ที่ตั้งในข้อมูลดีลเลอร์ (ต่อกลุ่มสินค้า) → ค่าของสินค้าในหน้านี้ → % ของ pricelist และคู่ราคาที่ <Link href="/admin/prices?pairs=open" className="text-primary-ink underline">ตารางราคา</Link></p>
       </div>
 
       {params.saved && <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700">บันทึกแล้ว</p>}

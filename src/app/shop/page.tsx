@@ -68,8 +68,8 @@ export default async function ShopHome() {
       {catalog && favorites.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Heart className="size-4 fill-primary text-primary" /> รายการโปรด</h2>
-            <Link href="/shop/favorites" className="text-xs text-primary">ดูทั้งหมด ({favoriteIds.length})</Link>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Heart className="size-4 fill-primary text-primary-ink" /> รายการโปรด</h2>
+            <Link href="/shop/favorites" className="text-xs text-primary-ink">ดูทั้งหมด ({favoriteIds.length})</Link>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             {favorites.map((product) => <ProductCard key={product.id} product={product} price={resolvePrice(catalog!, product, profile)} favorite />)}
@@ -111,7 +111,7 @@ export default async function ShopHome() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">ออเดอร์ล่าสุด</h2>
-            <Link href="/shop/orders" className="text-xs text-primary">ดูทั้งหมด</Link>
+            <Link href="/shop/orders" className="text-xs text-primary-ink">ดูทั้งหมด</Link>
           </div>
           {orders.slice(0, 3).map((order) => (
             <Link key={order.id} href={`/shop/orders/${order.id}`} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm">
@@ -127,7 +127,7 @@ export default async function ShopHome() {
 
       {!lastOrder && catalog && (
         <section className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-          ยังไม่มีออเดอร์ ลองพิมพ์ขนาดยางด้านบน หรือไปที่ <Link href="/shop/quick" className="text-primary">สั่งเร็ว</Link> เพื่อวางรายการหลายบรรทัด
+          ยังไม่มีออเดอร์ ลองพิมพ์ขนาดยางด้านบน หรือไปที่ <Link href="/shop/quick" className="text-primary-ink">สั่งเร็ว</Link> เพื่อวางรายการหลายบรรทัด
         </section>
       )}
       </aside>

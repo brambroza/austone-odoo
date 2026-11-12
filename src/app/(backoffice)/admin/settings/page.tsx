@@ -84,7 +84,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <section className="rounded-xl border border-border bg-card">
           <h2 className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
             <span className="flex items-center gap-2"><Plug className="size-4" /> การเชื่อมต่อที่ใช้อยู่</span>
-            <Badge variant="outline" className={cn('border-transparent', conn.source === 'db' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{conn.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
+            <Badge variant="outline" className={cn('border-transparent', conn.source === 'db' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground')}>{conn.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
           </h2>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 p-4 text-sm">
             <dt className="flex items-center gap-1.5 text-muted-foreground"><Link2 className="size-3.5" /> URL</dt>
@@ -164,7 +164,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <span className="flex items-center gap-2"><MessageCircle className="size-4 text-[#06c755]" /> LINE แจ้งเตือน</span>
           <span className="flex items-center gap-2">
             <Badge variant="outline" className={cn('border-transparent', line.channelAccessToken ? 'bg-emerald-500/15 text-emerald-700' : 'bg-muted text-muted-foreground')}>{line.channelAccessToken ? 'push ดีลเลอร์เปิดอยู่' : 'ยังไม่ได้ตั้ง token'}</Badge>
-            <Badge variant="outline" className={cn('border-transparent', line.source === 'db' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{line.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
+            <Badge variant="outline" className={cn('border-transparent', line.source === 'db' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground')}>{line.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
           </span>
         </h2>
         {line.savedError && <p className="m-4 flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-800"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> {line.savedError}</p>}
@@ -204,10 +204,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       <section id="mail" className="rounded-xl border border-border bg-card">
         <h2 className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
-          <span className="flex items-center gap-2"><Mail className="size-4 text-primary" /> อีเมลขาออก (SMTP)</span>
+          <span className="flex items-center gap-2"><Mail className="size-4 text-primary-ink" /> อีเมลขาออก (SMTP)</span>
           <span className="flex items-center gap-2">
             <Badge variant="outline" className={cn('border-transparent', mailOn ? 'bg-emerald-500/15 text-emerald-700' : 'bg-muted text-muted-foreground')}>{mailOn ? 'ส่งอีเมลได้' : 'ยังไม่ได้ตั้งค่า'}</Badge>
-            <Badge variant="outline" className={cn('border-transparent', mail.source === 'db' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{mail.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
+            <Badge variant="outline" className={cn('border-transparent', mail.source === 'db' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground')}>{mail.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'จาก .env'}</Badge>
           </span>
         </h2>
         {mail.savedError && <p className="m-4 flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-800"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> {mail.savedError}</p>}
@@ -228,7 +228,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <label className={label}>รหัสผ่าน SMTP <span className="font-normal text-muted-foreground">(เว้นว่าง = ใช้ค่าเดิม)</span>
               <Input name="pass" type="password" autoComplete="new-password" placeholder={mail.pass ? '••••••••' : 'app password'} className={field} />
             </label>
-            <label className={cn(label, 'md:col-span-2')}>ผู้ส่ง (From)<Input name="from" defaultValue={mail.from} placeholder="12buy Dealer <no-reply@company.com>" className={field} /></label>
+            <label className={cn(label, 'md:col-span-2')}>ผู้ส่ง (From)<Input name="from" defaultValue={mail.from} placeholder="Austone Dealer <no-reply@company.com>" className={field} /></label>
             <p className="text-xs text-muted-foreground md:col-span-2">ระบบจะลองเชื่อมต่อและเข้าสู่ระบบ SMTP ก่อนบันทึก ถ้าไม่ผ่านจะไม่เปลี่ยนค่าเดิม · ใช้ส่งรหัสผ่านชั่วคราวตอนกด “รีเซ็ตรหัส” ให้ผู้ใช้</p>
             <div className="md:col-span-2"><Button type="submit" size="sm"><Save /> ทดสอบและบันทึกอีเมล</Button></div>
           </form>
@@ -255,8 +255,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       <section id="credit" className="rounded-xl border border-border bg-card">
         <h2 className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
-          <span className="flex items-center gap-2"><Wallet className="size-4 text-primary" /> นโยบายเครดิต · ล็อกวงเงินเมื่อค้างชำระ</span>
-          <Badge variant="outline" className={cn('border-transparent', creditPolicy.source === 'db' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{creditPolicy.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'ค่าเริ่มต้น'}</Badge>
+          <span className="flex items-center gap-2"><Wallet className="size-4 text-primary-ink" /> นโยบายเครดิต · ล็อกวงเงินเมื่อค้างชำระ</span>
+          <Badge variant="outline" className={cn('border-transparent', creditPolicy.source === 'db' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground')}>{creditPolicy.source === 'db' ? 'บันทึกจากหน้าเว็บ' : 'ค่าเริ่มต้น'}</Badge>
         </h2>
         <div className="grid gap-4 p-4 text-sm lg:grid-cols-[1fr_320px]">
           <form action={saveCreditPolicyAction} className="grid gap-3 md:grid-cols-2">

@@ -94,7 +94,7 @@ export function NotificationBell() {
             ))}
           </ul>
         )}
-        <Link href="/admin" onClick={() => setOpen(false)} className="block border-t border-border px-3 py-2 text-center text-xs font-medium text-primary hover:bg-muted">ดูแดชบอร์ด</Link>
+        <Link href="/admin" onClick={() => setOpen(false)} className="block border-t border-border px-3 py-2 text-center text-xs font-medium text-primary-ink hover:bg-muted">ดูแดชบอร์ด</Link>
       </PopoverContent>
     </Popover>
   );

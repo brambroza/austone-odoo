@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, LogIn, Menu, Phone, Search, X } from 'lucide-react';
 import { SITE } from '@/lib/seo';
 import { DEALER_TYPE_LABELS, type DealerType } from '@/lib/shop/types';
-import { BrandLogo } from '@/components/landing/brand-logo';
+import { BrandWordmark } from '@/components/landing/brand-logo';
 
 const CATEGORY_LINKS = (Object.entries(DEALER_TYPE_LABELS) as [DealerType, string][]).map(([value, label]) => ({ href: `/tires?type=${value}`, label }));
 
@@ -21,7 +21,7 @@ const NAV: { href: string; label: string; children?: { href: string; label: stri
 
 /**
  * Two-tier header modelled on retail tyre sites: a white utility row
- * (logo, size search, phone, sign-up, login) over a red navigation bar with a
+ * (logo, size search, phone, sign-up, login) over a yellow navigation bar with a
  * product dropdown. Collapses to logo + actions + drawer on mobile.
  */
 export function LandingHeader() {
@@ -47,20 +47,20 @@ export function LandingHeader() {
       <div className="border-b border-[var(--lp-line)] bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           <Link href="/" className="flex shrink-0 items-center gap-2 font-extrabold tracking-tight" aria-label={`${SITE.name} หน้าแรก`}>
-            <BrandLogo size={40} />
-            <span className="hidden sm:inline">12buy <span className="font-medium text-[var(--lp-muted)]">Dealer</span></span>
+            <BrandWordmark height={36} alt="" />
+            <span className="hidden font-medium text-[var(--lp-muted)] sm:inline">Dealer</span>
           </Link>
 
           <div className="hidden flex-1 md:block"><HeaderSearch /></div>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
-            <a href={telHref} className="hidden items-center gap-1.5 text-sm font-bold text-[var(--lp-fg)] hover:text-[var(--lp-accent)] lg:inline-flex">
-              <Phone className="size-4 text-[var(--lp-accent)]" aria-hidden="true" /> โทร {SITE.phone}
+            <a href={telHref} className="hidden items-center gap-1.5 text-sm font-bold text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)] lg:inline-flex">
+              <Phone className="size-4 text-[var(--lp-accent-ink)]" aria-hidden="true" /> โทร {SITE.phone}
             </a>
-            <a href={telHref} aria-label={`โทร ${SITE.phone}`} className="flex size-10 items-center justify-center rounded-full border border-[var(--lp-line)] text-[var(--lp-accent)] lg:hidden">
+            <a href={telHref} aria-label={`โทร ${SITE.phone}`} className="flex size-10 items-center justify-center rounded-full border border-[var(--lp-line)] text-[var(--lp-accent-ink)] lg:hidden">
               <Phone className="size-4" aria-hidden="true" />
             </a>
-            <Link href="/#register" className="hidden text-sm font-semibold text-[var(--lp-muted)] hover:text-[var(--lp-accent)] md:inline">สมัครดีลเลอร์</Link>
+            <Link href="/#register" className="hidden text-sm font-semibold text-[var(--lp-muted)] hover:text-[var(--lp-accent-ink)] md:inline">สมัครดีลเลอร์</Link>
             <Link href="/login" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--lp-accent)] px-3.5 text-sm font-bold text-[var(--lp-accent-fg)] transition hover:brightness-110 sm:px-4">
               <LogIn className="size-4" aria-hidden="true" /> เข้าสู่ระบบ
             </Link>
@@ -85,7 +85,7 @@ export function LandingHeader() {
                 <ul className="pointer-events-none invisible absolute left-0 top-full z-40 min-w-56 translate-y-1 rounded-b-2xl border border-[var(--lp-line)] bg-white py-2 text-[var(--lp-fg)] opacity-0 shadow-xl transition group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                   {item.children.map((child) => (
                     <li key={child.href}>
-                      <Link href={child.href} onClick={(e) => e.currentTarget.blur()} className="block px-4 py-2 text-sm hover:bg-[var(--lp-accent-soft)] hover:text-[var(--lp-accent)]">{child.label}</Link>
+                      <Link href={child.href} onClick={(e) => e.currentTarget.blur()} className="block px-4 py-2 text-sm hover:bg-[var(--lp-accent-soft)] hover:text-[var(--lp-accent-ink)]">{child.label}</Link>
                     </li>
                   ))}
                 </ul>
@@ -101,7 +101,7 @@ export function LandingHeader() {
           <button type="button" aria-label="ปิดเมนู" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-y-0 right-0 flex w-[84%] max-w-sm flex-col bg-white shadow-2xl">
             <div className="flex h-16 items-center justify-between border-b border-[var(--lp-line)] px-4">
-              <span className="flex items-center gap-2 font-extrabold"><BrandLogo size={32} /> 12buy Dealer</span>
+              <span className="flex items-center gap-2 font-extrabold"><BrandWordmark height={30} /> <span className="font-medium text-[var(--lp-muted)]">Dealer</span></span>
               <button type="button" onClick={() => setOpen(false)} aria-label="ปิดเมนู" className="flex size-10 items-center justify-center rounded-full border border-[var(--lp-line)]"><X className="size-5" aria-hidden="true" /></button>
             </div>
             <ul className="flex-1 overflow-y-auto py-2">
@@ -121,7 +121,7 @@ export function LandingHeader() {
             <div className="space-y-2 border-t border-[var(--lp-line)] p-4">
               <Link href="/login" onClick={() => setOpen(false)} className="flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--lp-accent)] font-bold text-[var(--lp-accent-fg)]"><LogIn className="size-4" aria-hidden="true" /> เข้าสู่ระบบดีลเลอร์</Link>
               <Link href="/#register" onClick={() => setOpen(false)} className="flex h-11 items-center justify-center rounded-full border border-[var(--lp-line)] font-semibold">สมัครดีลเลอร์</Link>
-              <a href={telHref} className="flex items-center justify-center gap-2 pt-1 text-sm text-[var(--lp-muted)]"><Phone className="size-4 text-[var(--lp-accent)]" aria-hidden="true" /> {SITE.phone}</a>
+              <a href={telHref} className="flex items-center justify-center gap-2 pt-1 text-sm text-[var(--lp-muted)]"><Phone className="size-4 text-[var(--lp-accent-ink)]" aria-hidden="true" /> {SITE.phone}</a>
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@ function HeaderSearch({ compact = false }: { compact?: boolean }) {
     >
       <Search className="ml-4 size-4 shrink-0 text-[var(--lp-muted)]" aria-hidden="true" />
       <input value={value} onChange={(e) => setValue(e.target.value)} inputMode="search" enterKeyHint="search" autoComplete="off" placeholder="ค้นหาขนาดยาง เช่น 195/65R15 หรือ 1956515" aria-label="ขนาดยาง" className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-[var(--lp-muted)]" />
-      <button type="submit" className="mr-1 h-8 shrink-0 rounded-full bg-[var(--lp-fg)] px-4 text-xs font-bold text-white transition hover:bg-[var(--lp-accent)]">ค้นหา</button>
+      <button type="submit" className="mr-1 h-8 shrink-0 rounded-full bg-[var(--lp-fg)] px-4 text-xs font-bold text-white transition hover:bg-[var(--lp-accent)] hover:text-[var(--lp-accent-fg)]">ค้นหา</button>
     </form>
   );
 }

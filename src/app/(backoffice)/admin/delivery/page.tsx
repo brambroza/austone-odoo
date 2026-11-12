@@ -88,7 +88,7 @@ export default async function DeliveryPage({ searchParams }: { searchParams: Pro
           <h1 className="text-2xl font-bold">การจัดส่ง</h1>
           <p className="text-sm text-muted-foreground">วิธีจัดส่งจาก Odoo (Sales → Delivery Methods) · แก้ที่นี่แล้วเขียนเข้า Odoo ทันที</p>
           <p className="text-xs text-muted-foreground">ส่วนลดค่าขนส่ง: ตั้งยอดลดต่อเส้น / วง / มัด แยกตามวิธีจัดส่งและกลุ่มสินค้า หักในบิลทุกวิธีชำระ · ค่าขนส่งจริงบริษัทเรียกเก็บแยกต่างหาก ไม่อยู่ในบิลเว็บ</p>
-          <p className="text-xs text-muted-foreground">ดีลเลอร์เลือกเองไม่ได้: ออเดอร์ใช้การจัดส่งที่กำหนดให้ลูกค้าที่หน้า <Link href="/admin/dealers" className="text-primary underline">ดีลเลอร์ / ลูกค้า Odoo</Link> · ลูกค้าที่ยังไม่กำหนด ใช้ตัวแรก (ลำดับน้อยสุด) ที่เปิดบนเว็บ{defaultCarrier ? ` ตอนนี้คือ “${defaultCarrier.name}”` : ' (ตอนนี้ไม่มี ลูกค้าที่ยังไม่กำหนดจะสั่งซื้อไม่ได้)'} · ใบสั่งขายใน Odoo จะตั้ง Delivery Method ให้</p>
+          <p className="text-xs text-muted-foreground">ดีลเลอร์เลือกเองไม่ได้: ออเดอร์ใช้การจัดส่งที่กำหนดให้ลูกค้าที่หน้า <Link href="/admin/dealers" className="text-primary-ink underline">ดีลเลอร์ / ลูกค้า Odoo</Link> · ลูกค้าที่ยังไม่กำหนด ใช้ตัวแรก (ลำดับน้อยสุด) ที่เปิดบนเว็บ{defaultCarrier ? ` ตอนนี้คือ “${defaultCarrier.name}”` : ' (ตอนนี้ไม่มี ลูกค้าที่ยังไม่กำหนดจะสั่งซื้อไม่ได้)'} · ใบสั่งขายใน Odoo จะตั้ง Delivery Method ให้</p>
         </div>
         {writable && <Button size="sm" nativeButton={false} render={<Link href={href({ new: '1', edit: undefined, error: undefined })} scroll={false} />}><Plus /> เพิ่มการจัดส่ง</Button>}
       </div>
@@ -133,7 +133,7 @@ export default async function DeliveryPage({ searchParams }: { searchParams: Pro
                 </TableCell>
                 <TableCell data-label="สถานะ">
                   <span className="flex flex-wrap gap-1">
-                    {c.id === defaultCarrier?.id && <Badge variant="outline" className="border-transparent bg-primary/10 text-primary">ค่าเริ่มต้น</Badge>}
+                    {c.id === defaultCarrier?.id && <Badge variant="outline" className="border-transparent bg-primary/10 text-primary-ink">ค่าเริ่มต้น</Badge>}
                     {c.published && c.active && <Badge variant="outline" className="border-transparent bg-emerald-500/15 text-emerald-700">เปิดบนเว็บ</Badge>}
                     {!c.active && <Badge variant="outline">ปิดใช้งาน</Badge>}
                   </span>

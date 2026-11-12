@@ -17,7 +17,7 @@ export type LineConfig = {
   loginChannelSecret: string;
   /** Group the OA was added to; staff alerts (new order, slip, Odoo failure) go here. */
   adminGroupId: string;
-  /** Basic id shown to dealers so they can add the OA as a friend (e.g. @12buy). */
+  /** Basic id shown to dealers so they can add the OA as a friend (e.g. @agu2477n). */
   basicId: string;
   source: 'db' | 'env';
   updatedAt: string | null;

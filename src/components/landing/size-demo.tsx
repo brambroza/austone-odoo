@@ -76,7 +76,7 @@ export function SizeDemo() {
               <p className="text-xs text-[var(--lp-muted)]">{row.size}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-bold text-[var(--lp-accent)]">฿{row.price.toLocaleString('th-TH')}</p>
+              <p className="text-sm font-bold text-[var(--lp-accent-ink)]">฿{row.price.toLocaleString('th-TH')}</p>
               <p className={`text-[11px] ${row.stock === 'มี' ? 'text-emerald-600' : row.stock === 'เหลือน้อย' ? 'text-amber-600' : 'text-[var(--lp-muted)]'}`}>{row.stock}</p>
             </div>
           </li>

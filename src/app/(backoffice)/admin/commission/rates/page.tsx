@@ -122,7 +122,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
               </TableBody>
             </Table>
           </TableCard>
-          <Link href={`${PATH}?${ctxQuery(ctx, { all: showAll ? undefined : '1' })}`} className="text-xs text-primary underline">{showAll ? 'ซ่อนอัตราที่สิ้นสุดแล้ว' : 'แสดงอัตราที่สิ้นสุดแล้วด้วย'}</Link>
+          <Link href={`${PATH}?${ctxQuery(ctx, { all: showAll ? undefined : '1' })}`} className="text-xs text-primary-ink underline">{showAll ? 'ซ่อนอัตราที่สิ้นสุดแล้ว' : 'แสดงอัตราที่สิ้นสุดแล้วด้วย'}</Link>
 
           <section className="rounded-xl border border-border bg-card p-4">
             <h2 className="mb-3 text-sm font-semibold">เพิ่มอัตรา</h2>
@@ -132,7 +132,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
               <Button type="submit" size="sm" variant="outline">ค้นหา</Button>
               {products.length > 0 && (
                 <ul className="w-full space-y-1 text-xs">
-                  {products.map((p) => <li key={p.id}><Link className="text-primary underline" href={`${PATH}?${ctxQuery(ctx, { pid: String(p.id), pname: p.name })}`}>{p.name}</Link> <span className="text-muted-foreground">{p.category}</span></li>)}
+                  {products.map((p) => <li key={p.id}><Link className="text-primary-ink underline" href={`${PATH}?${ctxQuery(ctx, { pid: String(p.id), pname: p.name })}`}>{p.name}</Link> <span className="text-muted-foreground">{p.category}</span></li>)}
                 </ul>
               )}
             </form>
@@ -140,7 +140,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
               {hidden}
               {Number.isInteger(pid) && pid > 0 ? (
                 <p className="rounded-lg bg-muted p-2 text-sm sm:col-span-2 lg:col-span-4">
-                  รายสินค้า: <b>{params.pname}</b> (#{pid}) <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-2 text-xs text-primary underline">ยกเลิก ใช้หมวดสินค้าแทน</Link>
+                  รายสินค้า: <b>{params.pname}</b> (#{pid}) <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-2 text-xs text-primary-ink underline">ยกเลิก ใช้หมวดสินค้าแทน</Link>
                   <input type="hidden" name="odooProductId" value={pid} /><input type="hidden" name="productName" value={params.pname ?? ''} />
                 </p>
               ) : (

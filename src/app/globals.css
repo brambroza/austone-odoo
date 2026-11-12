@@ -5,8 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: var(--font-geist), var(--font-noto-thai), ui-sans-serif, system-ui, sans-serif;
-    --font-heading: var(--font-sans);
+    --font-sans: var(--font-inter), var(--font-noto-thai), ui-sans-serif, system-ui, sans-serif;
+    --font-heading: var(--font-inter-tight), var(--font-noto-thai), ui-sans-serif, system-ui, sans-serif;
+    --color-primary-ink: var(--primary-ink);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,73 +48,81 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Brand palette taken from the Austone Odoo website theme (austone-thailand-coltd.odoo.com):
+ * o-color-1 #F5E400 (yellow), o-color-2 #F0CDA8 (sand), o-color-3 #F6F5F4 (light), o-color-5 #1B1319 (ink).
+ * Yellow is too light to read as text on white, so `--primary-ink` (text-primary-ink) is the readable
+ * olive shade Odoo also uses for links; on dark backgrounds it falls back to the yellow itself.
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --background: #FFFFFF;
+    --foreground: #1B1319;
+    --card: #FFFFFF;
+    --card-foreground: #1B1319;
+    --popover: #FFFFFF;
+    --popover-foreground: #1B1319;
+    --primary: #F5E400;
+    --primary-foreground: #1B1319;
+    --primary-ink: #766D00;
+    --secondary: #F0CDA8;
+    --secondary-foreground: #1B1319;
+    --muted: #F6F5F4;
+    --muted-foreground: #6B6469;
+    --accent: #F6F5F4;
+    --accent-foreground: #1B1319;
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: #E8E4E0;
+    --input: #E2DDD8;
+    --ring: #D4C600;
+    --chart-1: #F5E400;
+    --chart-2: #1B1319;
+    --chart-3: #F0CDA8;
+    --chart-4: #857C00;
+    --chart-5: #9A9196;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: #F6F5F4;
+    --sidebar-foreground: #1B1319;
+    --sidebar-primary: #F5E400;
+    --sidebar-primary-foreground: #1B1319;
+    --sidebar-accent: #ECEAE7;
+    --sidebar-accent-foreground: #1B1319;
+    --sidebar-border: #E8E4E0;
+    --sidebar-ring: #D4C600;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: #1B1319;
+    --foreground: #FFFFFF;
+    --card: #251C23;
+    --card-foreground: #FFFFFF;
+    --popover: #251C23;
+    --popover-foreground: #FFFFFF;
+    --primary: #F5E400;
+    --primary-foreground: #1B1319;
+    --primary-ink: #FFF34D;
+    --secondary: #F0CDA8;
+    --secondary-foreground: #1B1319;
+    --muted: #2F252D;
+    --muted-foreground: #B5ADB2;
+    --accent: #2F252D;
+    --accent-foreground: #FFFFFF;
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --ring: #F5E400;
+    --chart-1: #F5E400;
+    --chart-2: #F0CDA8;
+    --chart-3: #F6F5F4;
+    --chart-4: #FFF34D;
+    --chart-5: #9A9196;
+    --sidebar: #1B1319;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #F5E400;
+    --sidebar-primary-foreground: #1B1319;
+    --sidebar-accent: #2F252D;
+    --sidebar-accent-foreground: #FFFFFF;
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: #F5E400;
 }
 
 @layer base {
@@ -127,28 +136,31 @@
     @apply font-sans;
     }
 }
-/* ---------- Public landing (light, red/white pastel) ---------- */
+/* ---------- Public landing (Austone: white / light grey, yellow accent, ink text) ---------- */
 .landing {
-  --lp-bg: oklch(0.995 0.004 20);
-  --lp-bg-2: oklch(0.965 0.018 20);
-  --lp-fg: oklch(0.24 0.05 25);
-  --lp-muted: oklch(0.52 0.05 25);
-  --lp-line: oklch(0.6 0.2 25 / 16%);
-  --lp-accent: oklch(0.6 0.21 27);
-  --lp-accent-fg: oklch(0.995 0 0);
-  --lp-accent-soft: oklch(0.93 0.045 20);
+  --lp-bg: #FFFFFF;
+  --lp-bg-2: #F6F5F4;
+  --lp-fg: #1B1319;
+  --lp-muted: #6B6469;
+  --lp-line: rgb(27 19 25 / 12%);
+  --lp-accent: #F5E400;
+  --lp-accent-fg: #1B1319;
+  --lp-accent-ink: #766D00;
+  --lp-accent-soft: #FCF7C4;
+  --lp-sand: #F0CDA8;
+  --lp-dark: #1B1319;
   background: var(--lp-bg);
   color: var(--lp-fg);
 }
 .landing .lp-grid {
   background-image:
-    linear-gradient(to right, oklch(0.6 0.2 25 / 7%) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.6 0.2 25 / 7%) 1px, transparent 1px);
+    linear-gradient(to right, rgb(27 19 25 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(27 19 25 / 6%) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
 }
 .landing .lp-glow {
-  background: radial-gradient(60% 50% at 50% 0%, oklch(0.78 0.14 20 / 30%), transparent 70%);
+  background: radial-gradient(60% 50% at 50% 0%, rgb(245 228 0 / 28%), transparent 70%);
 }
 
 /* Toast close button: top-right corner of the card (sonner puts it top-left by default). */

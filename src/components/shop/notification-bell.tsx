@@ -46,7 +46,7 @@ export function ShopNotificationBell() {
         </button>
       } />
       <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2 text-sm font-semibold">การแจ้งเตือน <Link href="/shop/notifications" className="text-xs font-normal text-primary">ดูทั้งหมด</Link></div>
+        <div className="flex items-center justify-between border-b border-border px-3 py-2 text-sm font-semibold">การแจ้งเตือน <Link href="/shop/notifications" className="text-xs font-normal text-primary-ink">ดูทั้งหมด</Link></div>
         <ul className="max-h-80 divide-y divide-border overflow-auto text-sm">
           {!data ? <li className="p-3 text-muted-foreground">กำลังโหลด…</li>
             : data.items.length === 0 ? <li className="p-3 text-muted-foreground">ยังไม่มีการแจ้งเตือน</li>

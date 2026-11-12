@@ -124,11 +124,11 @@ function SlipPickerView({ picker, busy, locked, actions }: { picker: Picker; bus
             dragging ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:border-primary/60 hover:bg-muted/50',
           )}
         >
-          <span className={cn('flex size-12 items-center justify-center rounded-full transition-colors', dragging ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary')}>
+          <span className={cn('flex size-12 items-center justify-center rounded-full transition-colors', dragging ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary-ink')}>
             {busy ? <Loader2 className="size-6 animate-spin" /> : <ImageUp className="size-6" />}
           </span>
           <p className="text-sm font-medium">
-            {preparing ? 'กำลังเตรียมรูป...' : dragging ? 'ปล่อยเพื่อแนบสลิป' : <><span className="hidden md:inline">ลากรูปสลิปมาวางที่นี่ หรือ </span><span className="text-primary underline-offset-2 md:underline">เลือกรูปสลิป</span></>}
+            {preparing ? 'กำลังเตรียมรูป...' : dragging ? 'ปล่อยเพื่อแนบสลิป' : <><span className="hidden md:inline">ลากรูปสลิปมาวางที่นี่ หรือ </span><span className="text-primary-ink underline-offset-2 md:underline">เลือกรูปสลิป</span></>}
           </p>
           <p className="text-xs text-muted-foreground">JPG, PNG, WebP · รูปใหญ่ระบบย่อให้อัตโนมัติ</p>
         </div>

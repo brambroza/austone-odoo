@@ -18,7 +18,7 @@ export function FavoriteButton({ productId, active, className }: { productId: nu
       aria-pressed={optimistic}
       disabled={pending}
       onClick={() => startTransition(async () => { setOptimistic(!optimistic); await toggleFavoriteAction(productId); })}
-      className={cn('flex size-9 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground transition hover:text-primary', optimistic && 'border-primary/30 text-primary', className)}
+      className={cn('flex size-9 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground transition hover:text-primary-ink', optimistic && 'border-primary/30 text-primary-ink', className)}
     >
       <Heart className={cn('size-4', optimistic && 'fill-current')} />
     </button>

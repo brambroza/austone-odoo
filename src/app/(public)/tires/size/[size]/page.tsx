@@ -37,7 +37,7 @@ export default async function SizePage({ params }: { params: Promise<{ size: str
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(crumbs)) }} />
       <Crumbs crumbs={crumbs} />
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">ยางขนาด <span className="font-mono text-[var(--lp-accent)]">{label}</span> ราคาส่ง</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">ยางขนาด <span className="font-mono text-[var(--lp-accent-ink)]">{label}</span> ราคาส่ง</h1>
         <p className="mt-2 max-w-2xl text-[var(--lp-muted)]">ทุกแบรนด์ที่มีในขนาดนี้ พร้อมสถานะสต็อก ดีลเลอร์เข้าสู่ระบบเพื่อดูราคาของร้านและสั่งซื้อ</p>
       </header>
       <SizeSearch initial={label} basePath="/tires/search" />

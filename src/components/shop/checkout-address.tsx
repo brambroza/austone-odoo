@@ -32,7 +32,7 @@ export function CheckoutAddress({ address, guessed, legacyText, canSave }: {
         <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
           <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           <p className="min-w-0 flex-1">{formatThaiAddress(address)}</p>
-          <button type="button" onClick={() => setEditing(true)} className="shrink-0 text-xs font-semibold text-primary underline underline-offset-2">เปลี่ยน</button>
+          <button type="button" onClick={() => setEditing(true)} className="shrink-0 text-xs font-semibold text-primary-ink underline underline-offset-2">เปลี่ยน</button>
         </div>
         {guessed && <p className="text-[11px] text-muted-foreground">ดึงจากที่อยู่ของร้าน ตรวจสอบก่อนสั่ง ระบบจะบันทึกเป็นที่อยู่จัดส่งหลักให้</p>}
         <input type="hidden" name="line" value={address.line} />

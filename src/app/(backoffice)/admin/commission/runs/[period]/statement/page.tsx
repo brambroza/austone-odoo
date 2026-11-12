@@ -47,7 +47,7 @@ export default async function CommissionStatementPage({ params, searchParams }: 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <Link href={back} className="inline-flex items-center gap-1 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> กลับ</Link>
+        <Link href={back} className="inline-flex items-center gap-1 text-sm text-primary-ink hover:underline"><ArrowLeft className="size-4" /> กลับ</Link>
         <h1 className="text-xl font-bold">ใบสรุปค่าคอม {periodLabel(period, calendar)}</h1>
         <span className="ml-auto"><PrintButton label={reps.length > 1 ? `พิมพ์ทั้งหมด (${reps.length} คน)` : 'พิมพ์ / PDF'} /></span>
       </div>

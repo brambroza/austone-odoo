@@ -25,7 +25,7 @@ export function toCsv<T>(rows: readonly T[], columns: readonly Column<T>[]): str
 
 export async function toXlsx<T>(rows: readonly T[], columns: readonly Column<T>[], sheet = 'Sheet1'): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = '12buy Dealer';
+  wb.creator = 'Austone Dealer';
   const ws = wb.addWorksheet(sheet.slice(0, 31));
   ws.columns = columns.map((c) => ({ header: c.header, key: c.header, width: Math.min(40, Math.max(12, c.header.length + 4)) }));
   for (const row of rows) ws.addRow(columns.map((c) => c.value(row) ?? ''));

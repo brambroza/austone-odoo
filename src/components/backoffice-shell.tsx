@@ -49,7 +49,7 @@ function Brand() {
     <div className="flex items-center gap-2 px-2 py-1">
       <BrandLogo size={36} />
       <div className="leading-tight">
-        <p className="text-sm font-semibold">12buy Admin</p>
+        <p className="text-sm font-semibold">AUSTONE Admin</p>
         <p className="text-xs text-muted-foreground">หลังบ้านดีลเลอร์</p>
       </div>
     </div>
@@ -193,7 +193,7 @@ export function BackofficeShell({ user, sidebarOpen: initialSidebarOpen = true, 
             title={sidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู'} aria-label={sidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู'}>
             {sidebarOpen ? <PanelLeftClose className="size-5" /> : <PanelLeftOpen className="size-5" />}
           </Button>
-          <p className={cn('flex items-center gap-2 text-sm font-medium text-muted-foreground', sidebarOpen && 'md:hidden')}><BrandLogo size={28} /> 12buy Admin</p>
+          <p className={cn('flex items-center gap-2 text-sm font-medium text-muted-foreground', sidebarOpen && 'md:hidden')}><BrandLogo size={28} /> AUSTONE Admin</p>
           <div className="ml-auto flex items-center gap-1">
             <OdooHealthBadge />
             <NotificationBell />

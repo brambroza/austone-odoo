@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
           ))}
         </ul>
       )}
-      <p className="text-xs text-muted-foreground">อยากได้แจ้งเตือนใน LINE? <Link href="/shop/account#line" className="text-primary underline">เชื่อม LINE ที่หน้าข้อมูลร้าน</Link></p>
+      <p className="text-xs text-muted-foreground">อยากได้แจ้งเตือนใน LINE? <Link href="/shop/account#line" className="text-primary-ink underline">เชื่อม LINE ที่หน้าข้อมูลร้าน</Link></p>
     </div>
   );
 }

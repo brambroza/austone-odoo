@@ -94,7 +94,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
       {results.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          {onlyFav ? <>ยังไม่มีสินค้าในรายการโปรด กดรูปหัวใจบนสินค้าเพื่อเก็บไว้สั่งครั้งหน้า</> : range.min !== null || range.max !== null ? <>ไม่มีสินค้าในช่วงราคานี้ <Link href={href({ min: undefined, max: undefined })} className="text-primary underline">ล้างช่วงราคา</Link></> : <>
+          {onlyFav ? <>ยังไม่มีสินค้าในรายการโปรด กดรูปหัวใจบนสินค้าเพื่อเก็บไว้สั่งครั้งหน้า</> : range.min !== null || range.max !== null ? <>ไม่มีสินค้าในช่วงราคานี้ <Link href={href({ min: undefined, max: undefined })} className="text-primary-ink underline">ล้างช่วงราคา</Link></> : <>
             ไม่พบขนาดนี้ในประเภทที่ร้านคุณสั่งได้
             <br />ลองพิมพ์เฉพาะตัวเลข เช่น <span className="font-mono">19565</span> หรือขอบล้อ <span className="font-mono">R15</span>
           </>}

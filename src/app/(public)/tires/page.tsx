@@ -50,7 +50,7 @@ export default async function TiresPage({ searchParams }: { searchParams: Promis
           <h2 id="sizes-heading" className="text-lg font-bold">ขนาดยอดนิยม</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
             {SEO_SIZES.map((size) => (
-              <li key={size}><Link href={`/tires/size/${sizeSlug(size)}`} className="inline-block rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 font-mono text-sm hover:border-[var(--lp-accent)] hover:text-[var(--lp-accent)]">{size}</Link></li>
+              <li key={size}><Link href={`/tires/size/${sizeSlug(size)}`} className="inline-block rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 font-mono text-sm hover:border-[var(--lp-accent)] hover:text-[var(--lp-accent-ink)]">{size}</Link></li>
             ))}
           </ul>
         </section>
@@ -67,7 +67,7 @@ export default async function TiresPage({ searchParams }: { searchParams: Promis
                     <Image src={brandLogo(b.brand)!} alt={b.name} width={140} height={48} className="h-auto max-h-9 w-auto max-w-[130px] object-contain" />
                   ) : (
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--lp-accent-soft)] text-xs font-black text-[var(--lp-accent)]">{b.brand.slice(0, 3)}</span>
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--lp-accent-soft)] text-xs font-black text-[var(--lp-accent-ink)]">{b.brand.slice(0, 3)}</span>
                       <span className="min-w-0 truncate font-bold">{b.name}</span>
                     </span>
                   )}

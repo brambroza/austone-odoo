@@ -56,7 +56,7 @@ function PendingOverlay({ message, hint, seconds }: { message: string; hint?: st
       </div>
       <div className="fixed right-4 bottom-4 z-[100] w-72 rounded-xl border border-border bg-card p-3 text-sm shadow-lg" role="status" aria-live="polite">
         <div className="flex items-center gap-2 font-medium">
-          <Loader2 className="size-4 animate-spin text-primary" /> {message}
+          <Loader2 className="size-4 animate-spin text-primary-ink" /> {message}
           <span className="ml-auto text-xs tabular-nums text-muted-foreground">{seconds} วินาที</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">

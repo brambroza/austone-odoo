@@ -35,7 +35,7 @@ export function ErrorState({ error, reset, homeHref = '/', homeLabel = 'กล�
   const outline = landing ? 'border-[var(--lp-line)] hover:bg-[var(--lp-accent-soft)]' : 'border-border hover:bg-muted';
   return (
     <div role="alert" className={`mx-auto my-10 w-full max-w-md rounded-2xl border p-6 text-center shadow-sm ${card}`}>
-      <div className={`mx-auto mb-4 flex size-14 items-center justify-center rounded-full ${landing ? 'bg-[var(--lp-accent-soft)] text-[var(--lp-accent)]' : 'bg-destructive/10 text-destructive'}`}>
+      <div className={`mx-auto mb-4 flex size-14 items-center justify-center rounded-full ${landing ? 'bg-[var(--lp-accent-soft)] text-[var(--lp-accent-ink)]' : 'bg-destructive/10 text-destructive'}`}>
         <AlertTriangle className="size-7" aria-hidden="true" />
       </div>
       <h1 className="text-xl font-extrabold">ขออภัย เกิดข้อผิดพลาดชั่วคราว</h1>

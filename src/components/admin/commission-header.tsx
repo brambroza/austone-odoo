@@ -74,7 +74,7 @@ export function CommissionHeader({ ctx, path, title, description, showPeriod = t
 export function NoSource() {
   return (
     <p className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-      ยังไม่มีบริษัท เพิ่มการเชื่อมต่อ Odoo ของบริษัทก่อนที่ <Link href="/admin/commission/sources" className="text-primary underline">บริษัท / Odoo</Link>
+      ยังไม่มีบริษัท เพิ่มการเชื่อมต่อ Odoo ของบริษัทก่อนที่ <Link href="/admin/commission/sources" className="text-primary-ink underline">บริษัท / Odoo</Link>
     </p>
   );
 }

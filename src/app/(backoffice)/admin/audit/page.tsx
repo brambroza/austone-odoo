@@ -74,7 +74,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   <TableCell data-label="การกระทำ"><Badge variant="outline" className={cn('border-transparent font-mono text-[11px]', TONE[prefix] ?? 'bg-muted')}>{r.action}</Badge></TableCell>
                   <TableCell data-label="รายการ" className="font-mono text-xs">{r.entity} <span className="text-muted-foreground">{r.entityId.slice(0, 24)}</span></TableCell>
                   <TableCell data-label="รายละเอียด" data-priority="low" className="max-w-md">
-                    {r.diff ? <Link href={href({ open: r.id })} scroll={false} className="line-clamp-1 break-all text-xs text-primary underline">{JSON.stringify(r.diff).slice(0, 120)}</Link> : <span className="text-xs text-muted-foreground">—</span>}
+                    {r.diff ? <Link href={href({ open: r.id })} scroll={false} className="line-clamp-1 break-all text-xs text-primary-ink underline">{JSON.stringify(r.diff).slice(0, 120)}</Link> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                 </TableRow>
               );

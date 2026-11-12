@@ -53,7 +53,7 @@ export default async function MyProfilePage() {
       <section aria-labelledby="perm-heading" className="space-y-3 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="perm-heading" className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-4" /> สิทธิ์ของฉัน · {ROLE_LABELS[role]}</h2>
-          {isAdminRole(role) && <Link href="/admin/users/roles" className="text-sm text-primary hover:underline">ดูสิทธิ์ทุกบทบาท</Link>}
+          {isAdminRole(role) && <Link href="/admin/users/roles" className="text-sm text-primary-ink hover:underline">ดูสิทธิ์ทุกบทบาท</Link>}
         </div>
         {ROLE_DESCRIPTIONS[role] && <p className="text-sm text-muted-foreground">{ROLE_DESCRIPTIONS[role]}</p>}
         <ul className="grid gap-1.5 text-sm sm:grid-cols-2">

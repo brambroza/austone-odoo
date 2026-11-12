@@ -47,7 +47,7 @@ export function RegisterForm() {
         <label htmlFor="taxId" className={label}>เลขประจำตัวผู้เสียภาษี <span className="font-normal text-[var(--lp-muted)]">(ถ้ามี — 13 หลัก ของร้าน/บริษัท หรือเลขบัตรประชาชนเจ้าของร้าน ลูกค้าเงินสดเว้นว่างได้)</span></label>
         <input id="taxId" name="taxId" inputMode="numeric" autoComplete="off" maxLength={17} defaultValue={values?.taxId} placeholder="0-1055-56123-45-6" className={field} aria-invalid={invalid('taxId')} />
         {failed?.hint === 'activate' && (
-          <p className="mt-1 text-sm"><Link href="/activate" className="font-medium text-[var(--lp-accent)] underline">ไปหน้าเปิดใช้บัญชีลูกค้าเดิม</Link></p>
+          <p className="mt-1 text-sm"><Link href="/activate" className="font-medium text-[var(--lp-accent-ink)] underline">ไปหน้าเปิดใช้บัญชีลูกค้าเดิม</Link></p>
         )}
       </div>
       <div className="sm:col-span-2">
@@ -69,7 +69,7 @@ export function RegisterForm() {
         <legend className={label}>หมวดสินค้าที่ขาย</legend>
         <div className="mt-2 flex flex-wrap gap-2" aria-invalid={invalid('types')}>
           {TYPES.map(([value, text]) => (
-            <label key={value} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 text-sm has-[:checked]:border-[var(--lp-accent)] has-[:checked]:bg-[var(--lp-accent-soft)] has-[:checked]:text-[var(--lp-accent)]">
+            <label key={value} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[var(--lp-line)] bg-white px-3 py-1.5 text-sm has-[:checked]:border-[var(--lp-accent)] has-[:checked]:bg-[var(--lp-accent-soft)] has-[:checked]:text-[var(--lp-accent-ink)]">
               <input type="checkbox" name="types" value={value} defaultChecked={values?.types.includes(value)} className="accent-[var(--lp-accent)]" /> {text}
             </label>
           ))}
@@ -105,7 +105,7 @@ export function RegisterForm() {
       <label className="flex items-start gap-3 rounded-xl border border-[var(--lp-line)] bg-white p-3 text-sm sm:col-span-2 has-[:checked]:border-[var(--lp-accent)]">
         <input type="checkbox" name="consent" required className="mt-0.5 size-4 shrink-0 accent-[var(--lp-accent)]" aria-invalid={invalid('consent')} />
         <span>
-          ข้าพเจ้าได้อ่านและยอมรับ <Link href="/privacy" target="_blank" className="text-[var(--lp-accent)] underline">นโยบายความเป็นส่วนตัว</Link> และ <Link href="/terms" target="_blank" className="text-[var(--lp-accent)] underline">เงื่อนไขการใช้งาน</Link> และยินยอมให้บริษัทใช้ข้อมูลข้างต้นเพื่อพิจารณาเปิดบัญชีดีลเลอร์และติดต่อกลับ
+          ข้าพเจ้าได้อ่านและยอมรับ <Link href="/privacy" target="_blank" className="text-[var(--lp-accent-ink)] underline">นโยบายความเป็นส่วนตัว</Link> และ <Link href="/terms" target="_blank" className="text-[var(--lp-accent-ink)] underline">เงื่อนไขการใช้งาน</Link> และยินยอมให้บริษัทใช้ข้อมูลข้างต้นเพื่อพิจารณาเปิดบัญชีดีลเลอร์และติดต่อกลับ
         </span>
       </label>
       <div className="sm:col-span-2">

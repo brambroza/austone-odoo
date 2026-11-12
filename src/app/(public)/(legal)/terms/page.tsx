@@ -76,7 +76,7 @@ export default function TermsPage() {
       </Section>
 
       <Section n={9} title="ข้อมูลส่วนบุคคล">
-        <p>การเก็บและใช้ข้อมูลของท่านเป็นไปตาม <Link href="/privacy" className="text-[var(--lp-accent)] underline">นโยบายความเป็นส่วนตัว</Link> ซึ่งถือเป็นส่วนหนึ่งของเงื่อนไขนี้</p>
+        <p>การเก็บและใช้ข้อมูลของท่านเป็นไปตาม <Link href="/privacy" className="text-[var(--lp-accent-ink)] underline">นโยบายความเป็นส่วนตัว</Link> ซึ่งถือเป็นส่วนหนึ่งของเงื่อนไขนี้</p>
       </Section>
 
       <Section n={10} title="การเปลี่ยนแปลงเงื่อนไขและกฎหมายที่ใช้บังคับ">

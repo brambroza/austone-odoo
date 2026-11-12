@@ -106,7 +106,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         <CalendarRange className="size-4 text-muted-foreground" aria-hidden />
         <span className="text-muted-foreground">ช่วงเวลา:</span>
         {QUICK.map((k) => <FilterChip key={k} href={rangeHref(k)} active={rangeKey === k}>{RANGE_LABELS[k]}</FilterChip>)}
-        <Link href="/admin/reports" className="ml-auto text-primary underline">รายงานละเอียด →</Link>
+        <Link href="/admin/reports" className="ml-auto text-primary-ink underline">รายงานละเอียด →</Link>
       </div>
       <section aria-label="สรุปยอดขาย" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile icon={Coins} label={`ยอดขาย ${RANGE_LABELS[rangeKey]}`} value={<CountUp value={period.sales} format="baht" />} sub={`${period.orders.toLocaleString('th-TH')} ออเดอร์ · ${period.dealers} ร้าน · เฉลี่ย ${baht(period.avgOrder)}`} href={`/admin/reports?range=${rangeKey}`} />
@@ -120,7 +120,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <section aria-labelledby="todo-heading" className="rounded-xl border border-border bg-card">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-            <ListTodo className="size-5 text-primary" aria-hidden />
+            <ListTodo className="size-5 text-primary-ink" aria-hidden />
             <h2 id="todo-heading" className="font-semibold">สิ่งที่ต้องทำวันนี้</h2>
             {tasks.length > 0 && <Badge variant="outline" className="ml-auto">{tasks.length} เรื่อง</Badge>}
           </div>
@@ -189,7 +189,7 @@ function CreditDueList({ dues }: { dues: CreditDue[] }) {
   return (
     <section aria-labelledby="due-heading" className={cn('rounded-xl border bg-card p-4', overdue > 0 ? 'border-destructive/40' : 'border-border')}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <CalendarClock className="size-5 text-primary" aria-hidden />
+        <CalendarClock className="size-5 text-primary-ink" aria-hidden />
         <h2 id="due-heading" className="font-semibold">ครบกำหนดชำระ (ลูกค้าเครดิต)</h2>
         {dues.length > 0 && <span className="ml-auto text-xs text-muted-foreground">รวม <span className="font-semibold text-foreground tabular-nums">{baht(total)}</span></span>}
       </div>
@@ -212,7 +212,7 @@ function CreditDueList({ dues }: { dues: CreditDue[] }) {
           ))}
         </ul>
       )}
-      {dues.length > 8 && <Link href="/admin/orders?due=all" className="mt-2 block text-center text-xs font-medium text-primary hover:underline">ดูทั้งหมด {dues.length} บิล</Link>}
+      {dues.length > 8 && <Link href="/admin/orders?due=all" className="mt-2 block text-center text-xs font-medium text-primary-ink hover:underline">ดูทั้งหมด {dues.length} บิล</Link>}
       <p className="mt-2 text-[11px] text-muted-foreground">วันครบกำหนดดึงจากใบแจ้งหนี้ใน Odoo (ซิงก์สถานะอัตโนมัติ)</p>
     </section>
   );
@@ -224,7 +224,7 @@ function StatTile({ icon: Icon, label, value, sub, href }: { icon: typeof Coins;
     <Link href={href} className="group rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-md">
       <span className="flex items-center justify-between text-sm text-muted-foreground">
         {label}
-        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="size-4" aria-hidden /></span>
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary-ink"><Icon className="size-4" aria-hidden /></span>
       </span>
       <span className="mt-2 block text-2xl font-bold tabular-nums sm:text-3xl">{value}</span>
       <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">{sub}</span>

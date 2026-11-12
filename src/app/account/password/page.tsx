@@ -20,7 +20,7 @@ export default async function PasswordPage({ searchParams }: { searchParams: Pro
           <p className="mt-1 text-sm text-[var(--lp-muted)]">{user.mustChangePassword ? 'คุณได้รับรหัสผ่านชั่วคราว กรุณาตั้งรหัสใหม่ก่อนใช้งาน' : user.email}</p>
         </div>
         <PasswordForm forced={user.mustChangePassword} next={next ?? ''} />
-        {!user.mustChangePassword && <p className="mt-4 text-center text-sm"><Link href={homeFor(user.role as Role)} className="text-[var(--lp-accent)] hover:underline">กลับ</Link></p>}
+        {!user.mustChangePassword && <p className="mt-4 text-center text-sm"><Link href={homeFor(user.role as Role)} className="text-[var(--lp-accent-ink)] hover:underline">กลับ</Link></p>}
       </main>
     </div>
   );

@@ -59,7 +59,7 @@ export const SECTIONS: readonly SectionDef[] = [
   {
     key: 'hero', label: 'ส่วนบน (Hero)', description: 'หัวข้อใหญ่ ข้อความ ปุ่ม รูปหลัก และตัวเลขสถิติ 3 ช่อง', hideable: false,
     fields: [
-      T('badge', 'ป้ายเล็กเหนือหัวข้อ', 80), T('titleLine1', 'หัวข้อ บรรทัด 1', 60), T('titleAccent', 'หัวข้อ บรรทัด 2 (สีแดง)', 60), T('titleLine3', 'หัวข้อ บรรทัด 3', 60, { optional: true }),
+      T('badge', 'ป้ายเล็กเหนือหัวข้อ', 80), T('titleLine1', 'หัวข้อ บรรทัด 1', 60), T('titleAccent', 'หัวข้อ บรรทัด 2 (สีเน้น)', 60), T('titleLine3', 'หัวข้อ บรรทัด 3', 60, { optional: true }),
       A('sub', 'ข้อความใต้หัวข้อ', 300), T('primaryCta', 'ปุ่มหลัก (ค้นหายาง)', 40), T('secondaryCta', 'ปุ่มรอง (เข้าสู่ระบบ)', 40),
       { name: 'image', label: 'รูปหลัก (แนะนำสี่เหลี่ยมจัตุรัส)', kind: 'image' }, T('imageAlt', 'คำอธิบายรูป (alt สำหรับ SEO)', 160),
       T('brandsLabel', 'หัวข้อใต้รูป', 40), T('brandsText', 'รายชื่อแบรนด์ใต้รูป', 120), T('brandsBadge', 'ป้ายมุมขวา', 20, { optional: true }),
@@ -72,9 +72,9 @@ export const SECTIONS: readonly SectionDef[] = [
   },
   { key: 'brands', label: 'หัวข้อแบรนด์', description: 'หัวข้อเหนือตารางโลโก้แบรนด์ (โลโก้จัดการในโค้ด)', hideable: true, fields: [T('eyebrow', 'ป้ายเล็ก', 40), T('heading', 'หัวข้อ', 120)] },
   {
-    key: 'categories', label: 'หมวดสินค้า', description: '5 การ์ดหมวดสินค้า (ไอคอนคงที่ตามลำดับ: รถยนต์ · บรรทุก · มอเตอร์ไซค์ · แบตเตอรี่ · กระทะล้อ)', hideable: true,
+    key: 'categories', label: 'หมวดสินค้า', description: '3 การ์ดหมวดสินค้า (ไอคอนคงที่ตามลำดับ: รถยนต์ · บรรทุก · กระทะล้อ)', hideable: true,
     fields: [T('heading', 'หัวข้อ', 120), A('sub', 'คำอธิบาย', 300)],
-    list: { label: 'หมวด', min: 5, max: 5, fixed: true, fields: [T('label', 'ชื่อหมวด', 40), T('note', 'คำอธิบายสั้น', 60)] },
+    list: { label: 'หมวด', min: 3, max: 3, fixed: true, fields: [T('label', 'ชื่อหมวด', 40), T('note', 'คำอธิบายสั้น', 60)] },
   },
   {
     key: 'banners', label: 'แบนเนอร์สินค้า', description: 'แบนเนอร์ใหญ่ รูปแนวนอนสำหรับคอมพิวเตอร์ (ประมาณ 3:1) และแนวตั้งสำหรับมือถือ (ประมาณ 7:10)', hideable: true,
@@ -121,47 +121,46 @@ export function sectionDef(key: string): SectionDef | undefined {
 /** The copy that shipped with the site; shown until an admin saves a section. */
 export const DEFAULT_LANDING: LandingContent = {
   hero: {
-    badge: 'สำหรับดีลเลอร์ยางโดยเฉพาะ ใช้งานบนมือถือ',
-    titleLine1: 'ศูนย์รวมยางครบทุกประเภท', titleAccent: 'สั่งได้ใน 60 วินาที', titleLine3: 'จากมือถือของคุณ',
-    sub: 'ยางรถยนต์ ยางมอเตอร์ไซค์ ยางรถบรรทุก และแบตเตอรี่ จากแบรนด์ชั้นนำ พิมพ์ขนาดเห็นราคาของร้านทันที สั่งซ้ำ 1 ปุ่ม จัดส่งทั่วไทย',
+    badge: 'ตัวแทนจำหน่ายยาง AUSTONE เพียงรายเดียวในประเทศไทย',
+    titleLine1: 'ยางคุณภาพ', titleAccent: 'ที่สัมผัสได้', titleLine3: 'สั่งได้จากมือถือ',
+    sub: 'ยางรถยนต์ ยางรถบรรทุก และกระทะล้อ AUSTONE สำหรับดีลเลอร์ ค้นหาด้วยขนาด เห็นราคาของร้านทันที เคลมทันที ไม่มีเงื่อนไข* จัดส่งทั่วไทย',
     primaryCta: 'ค้นหายางตามขนาด', secondaryCta: 'เข้าสู่ระบบดีลเลอร์',
-    image: '/landing/hero-tall.webp', imageAlt: 'ยางรถยนต์ ยางมอเตอร์ไซค์ ยางรถบรรทุก และแบตเตอรี่จากแบรนด์ชั้นนำ',
-    brandsLabel: 'แบรนด์ที่จำหน่าย', brandsText: 'Bridgestone · Michelin · Yokohama · IRC · GS · 3K', brandsBadge: '10+ แบรนด์',
+    image: '/landing/austone/quality-tall.webp', imageAlt: 'ยาง AUSTONE ยางคุณภาพที่สัมผัสได้ โทร 02-711-5656',
+    brandsLabel: 'AUSTONE Thailand', brandsText: 'ยางรถยนต์ · ยางรถบรรทุก · กระทะล้อ', brandsBadge: 'รับประกัน 120 วัน',
     items: [
-      { value: 60, suffix: 'วินาที', label: 'สั่งสินค้าที่รู้ขนาดแล้ว' },
-      { value: 3, suffix: 'แตะ', label: 'สั่งซ้ำออเดอร์เดิม' },
-      { value: 77, suffix: 'จังหวัด', label: 'จัดส่งทั่วไทย' },
+      { value: 120, suffix: 'วัน', label: 'รับประกันยางรถยนต์ (PCR)' },
+      { value: 100, suffix: 'วัน', label: 'รับประกันยางรถบรรทุก (TBR)' },
+      { value: 1, suffix: 'เดียว', label: 'ตัวแทนจำหน่ายในไทย' },
     ],
   },
   trust: { show: true, items: TRUST_POINTS.map(({ title, body }) => ({ title, body })) },
-  brands: { show: true, eyebrow: 'แบรนด์', heading: 'แบรนด์ชั้นนำที่ดีลเลอร์สั่งได้ทันที' },
+  // A single-brand site has no brand wall; the section stays editable in case more brands are added.
+  brands: { show: false, eyebrow: 'แบรนด์', heading: 'ยาง AUSTONE ที่ดีลเลอร์สั่งได้ทันที' },
   categories: {
-    show: true, heading: 'ครบทุกหมวดที่ร้านยางต้องมี', sub: 'สั่งได้เฉพาะหมวดที่ร้านของคุณเปิดสิทธิ์ ราคาและสต็อกอัปเดตจากระบบคลังโดยตรง',
+    show: true, heading: 'สินค้า AUSTONE', sub: 'ยางรถยนต์ รถบรรทุก กระทะล้อ สั่งได้เฉพาะหมวดที่ร้านของคุณเปิดสิทธิ์ ราคาและสต็อกอัปเดตจากระบบคลังโดยตรง',
     items: [
-      { label: 'ยางรถยนต์', note: 'เก๋ง กระบะ SUV' },
+      { label: 'ยางรถยนต์', note: 'เก๋ง กระบะ SUV (PCR)' },
       { label: 'ยางรถบรรทุก', note: 'TBR ทุกขนาด' },
-      { label: 'ยางมอเตอร์ไซค์', note: 'ครอบครัว สปอร์ต บิ๊กไบค์' },
-      { label: 'แบตเตอรี่', note: 'ทุกยี่ห้อยอดนิยม' },
-      { label: 'กระทะล้อ', note: 'เหล็ก อัลลอย' },
+      { label: 'กระทะล้อ', note: 'รถยนต์และรถบรรทุก' },
     ],
   },
   banners: {
-    show: true, eyebrow: 'แคตตาล็อก', heading: 'สินค้าออนไลน์ สั่งได้ 24 ชั่วโมง',
+    show: true, eyebrow: 'AUSTONE Thailand', heading: 'ยางคุณภาพ ที่สัมผัสได้',
     items: [
-      { title: 'ยางรถยนต์', brands: 'Yokohama · Michelin · Lanvigator', wide: '/landing/car-wide.webp', tall: '/landing/car-tall.webp', href: '/shop?category=car' },
-      { title: 'ยางมอเตอร์ไซค์', brands: 'IRC · Arisun · SR Moto', wide: '/landing/moto-wide.webp', tall: '/landing/moto-tall.webp', href: '/shop?category=motorcycle' },
-      { title: 'แบตเตอรี่รถยนต์', brands: '3K · Camel Max · GS', wide: '/landing/battery-wide.webp', tall: '/landing/battery-tall.webp', href: '/shop?category=battery' },
+      { title: 'ยาง AUSTONE', brands: 'AUSTONE Racing Team', wide: '/landing/austone/racing-wide.webp', tall: '/landing/austone/racing-tall.webp', href: '/shop' },
+      { title: 'ยางรถยนต์ 4 เส้น', brands: 'ซื้อยาง AUSTONE 4 เส้น รับฟรีกระเป๋าเดินทาง 1 ใบ (มูลค่า 1,950 บาท)', wide: '/landing/austone/promo-luggage-wide.webp', tall: '/landing/austone/promo-luggage-tall.webp', href: '/shop?category=car' },
+      { title: 'ยางรถยนต์', brands: 'ยางคุณภาพ ที่สัมผัสได้ · รับประกัน 120 วัน', wide: '/landing/austone/quality-wide.webp', tall: '/landing/austone/quality-tall.webp', href: '/shop?category=car' },
     ],
   },
   demo: {
     show: true, eyebrow: 'ลองเลย', heading: 'ค้นยางคิดเป็นขนาด ไม่ใช่ยี่ห้อ',
-    body: 'ช่องเดียว พิมพ์ขนาดแบบไหนก็หาเจอ ระบบเข้าใจทั้ง 195/65R15, 195 65 15 และ 1956515 แล้วแสดงทุกยี่ห้อที่มีพร้อมราคาและสต็อก',
-    items: [{ text: 'เรียงราคาถูกไปแพงอัตโนมัติ' }, { text: 'เห็นขนาดเดียวกันยี่ห้ออื่นในหน้าสินค้า' }, { text: 'จำนวนเริ่มต้นเป็นชุด 2 หรือ 4 เส้นตามประเภท' }],
+    body: 'ช่องเดียว พิมพ์ขนาดแบบไหนก็หาเจอ ระบบเข้าใจทั้ง 195/65R15, 195 65 15 และ 1956515 แล้วแสดงยาง AUSTONE ทุกรุ่นที่มีพร้อมราคาและสต็อก',
+    items: [{ text: 'เรียงราคาถูกไปแพงอัตโนมัติ' }, { text: 'เห็นรุ่นอื่นในขนาดเดียวกันในหน้าสินค้า' }, { text: 'จำนวนเริ่มต้นเป็นชุด 2 หรือ 4 เส้นตามประเภท' }],
   },
   features: {
     show: true, heading: 'ขายให้ได้มากที่สุด ด้วยขั้นตอนน้อยที่สุด',
     items: [
-      { title: 'ค้นหาด้วยขนาด', body: 'พิมพ์ 195/65R15 หรือ 1956515 ก็หาเจอ เห็นทุกยี่ห้อ เรียงราคาถูกไปแพง' },
+      { title: 'ค้นหาด้วยขนาด', body: 'พิมพ์ 195/65R15 หรือ 1956515 ก็หาเจอ เห็นทุกรุ่น เรียงราคาถูกไปแพง' },
       { title: 'ราคาของร้านคุณ', body: 'ไม่มีราคากลางให้สับสน ทุกหน้าแสดงราคาตามสิทธิ์ของร้านทันทีที่เข้าสู่ระบบ' },
       { title: 'สั่งซ้ำ 1 ปุ่ม', body: 'ออเดอร์ล่าสุดและสินค้าที่สั่งบ่อยอยู่หน้าแรก กดเดียวลงตะกร้า' },
       { title: 'สั่งเร็วหลายรายการ', body: 'วางรายการ ขนาด จำนวน หลายบรรทัดลงตะกร้าทีเดียว เหมาะดีลเลอร์สั่งทีละสิบรายการ' },
@@ -178,9 +177,9 @@ export const DEFAULT_LANDING: LandingContent = {
     ],
   },
   // Coded samples were placeholders and never published, so the default list is empty.
-  testimonials: { show: true, eyebrow: 'เสียงจากดีลเลอร์', heading: 'ร้านยางทั่วไทยใช้งานจริง', items: [] },
+  testimonials: { show: true, eyebrow: 'เสียงจากดีลเลอร์', heading: 'ร้านยาง AUSTONE ทั่วไทยใช้งานจริง', items: [] },
   faq: { show: true, heading: 'คำถามที่ดีลเลอร์ถามบ่อย', items: FAQ.map(({ q, a }) => ({ q, a })) },
-  register: { show: true, heading: 'เปิดร้านยาง? สมัครเป็นดีลเลอร์กับเรา', body: 'กรอกข้อมูลร้านสั้นๆ หรือทักมาทาง LINE ทีมงานเปิดสิทธิ์ให้ภายใน 1 วันทำการ ไม่มีค่าสมัคร' },
+  register: { show: true, heading: 'สมัครเป็นดีลเลอร์ยาง AUSTONE', body: 'กรอกข้อมูลร้านสั้นๆ หรือทักมาทาง LINE ทีมงาน AUSTONE Thailand เปิดสิทธิ์ให้ภายใน 1 วันทำการ ไม่มีค่าสมัคร' },
 };
 
 /** Site path (`/landing/x.webp`, `/api/landing-images/x.webp`) or https URL; no protocol-relative or traversal. */

@@ -182,7 +182,7 @@ function GroupChips({ group: g, categoryName }: { group: CustomerGroup; category
   const empty = !g.brands.length && !g.categoryIds.length && !g.includeTmplIds.length && !g.excludeTmplIds.length;
   return (
     <span className="flex flex-wrap gap-1 text-xs">
-      {g.brands.map((b) => <span key={b} className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">{b}</span>)}
+      {g.brands.map((b) => <span key={b} className="rounded-full bg-primary/10 px-2 py-0.5 text-primary-ink">{b}</span>)}
       {g.categoryIds.map((id) => <span key={id} className="rounded-full bg-muted px-2 py-0.5">{categoryName.get(id) ?? `#${id}`}</span>)}
       {g.includeTmplIds.length > 0 && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-700">+{g.includeTmplIds.length} รายตัว</span>}
       {g.excludeTmplIds.length > 0 && <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">−{g.excludeTmplIds.length} ซ่อน</span>}

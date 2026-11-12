@@ -145,7 +145,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
               <ul className="mt-2 space-y-1">
                 {[...issueCounts.entries()].map(([message, count]) => <li key={message} className={cn(message.startsWith('ยังไม่ได้ตั้งเงินเดือน') && 'font-semibold text-destructive')}>{message}{count > 1 ? ` × ${count}` : ''}</li>)}
               </ul>
-              <Link href={`/admin/commission/collections?${ctxQuery(ctx, { issues: '1' })}`} className="mt-2 inline-block text-xs text-primary underline">ดูรายการเงินเข้าที่ต้องตรวจ</Link>
+              <Link href={`/admin/commission/collections?${ctxQuery(ctx, { issues: '1' })}`} className="mt-2 inline-block text-xs text-primary-ink underline">ดูรายการเงินเข้าที่ต้องตรวจ</Link>
             </details>
           )}
 
@@ -171,7 +171,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
                   const excludedBase = (r.excluded ?? []).reduce((sum, e) => sum + e.base, 0);
                   return (
                     <TableRow key={r.odooUserId}>
-                      <TableCell data-label="พนักงานขาย"><Link href={drill()} scroll={false} className="font-medium text-primary hover:underline">{r.repName}</Link><span className="block text-xs text-muted-foreground">{r.lines} บรรทัด · กดเพื่อดูรายใบแจ้งหนี้</span></TableCell>
+                      <TableCell data-label="พนักงานขาย"><Link href={drill()} scroll={false} className="font-medium text-primary-ink hover:underline">{r.repName}</Link><span className="block text-xs text-muted-foreground">{r.lines} บรรทัด · กดเพื่อดูรายใบแจ้งหนี้</span></TableCell>
                       <TableCell data-label="ยอดเก็บ" className="text-right tabular-nums">
                         <Link href={drill()} scroll={false} title="ดูว่ามาจากใบแจ้งหนี้ใบไหน" className="hover:underline">{baht(r.base)}</Link>
                         {r.counted !== undefined && <span className="block text-xs text-emerald-700">นำมาคิด {baht(r.counted)}</span>}
@@ -267,7 +267,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
               {showFormula ? 'ซ่อนสูตรคิดค่าคอม' : 'แสดงสูตรคิดค่าคอม'}
             </Link>
             {sp.inv && view === 'line' && (
-              <Link href={drillHref({ view: undefined, inv: undefined })} scroll={false} className="rounded-full border border-primary bg-primary/10 px-3 py-1 text-primary">
+              <Link href={drillHref({ view: undefined, inv: undefined })} scroll={false} className="rounded-full border border-primary bg-primary/10 px-3 py-1 text-primary-ink">
                 เฉพาะ {drillLines[0]?.invoiceName ?? `#${sp.inv}`} · ✕ กลับไปรายใบแจ้งหนี้
               </Link>
             )}
@@ -374,7 +374,7 @@ function InvoiceTable({ rows, formulas, lineHref }: { rows: InvoiceCommissionRow
             <Fragment key={r.key}>
             <TableRow className={cn(formulas && 'border-b-0', r.kind === 'RETRO' && 'bg-amber-500/5')}>
               <TableCell data-label="ใบแจ้งหนี้" className="whitespace-normal">
-                {r.invoiceId !== null ? <Link href={lineHref(r.invoiceId)} scroll={false} className="font-medium text-primary hover:underline">{r.invoiceName}</Link> : <span className="text-muted-foreground">ไม่ใช่ใบแจ้งหนี้</span>}
+                {r.invoiceId !== null ? <Link href={lineHref(r.invoiceId)} scroll={false} className="font-medium text-primary-ink hover:underline">{r.invoiceName}</Link> : <span className="text-muted-foreground">ไม่ใช่ใบแจ้งหนี้</span>}
                 {r.kind === 'RETRO' && <Badge variant="outline" className="ml-1 border-transparent bg-amber-500/15 text-amber-800">ปรับย้อนหลัง</Badge>}
                 <span className="block text-xs text-muted-foreground">{r.partnerName}{r.invoiceDate ? ` · ออก ${thaiDay(r.invoiceDate)}` : ''}</span>
               </TableCell>
@@ -554,7 +554,7 @@ function Formula({ formula }: { formula: LineFormula }) {
   return (
     <div className="space-y-1.5 text-xs">
       <p className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-        <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">อัตราที่ใช้</span>
+        <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary-ink">อัตราที่ใช้</span>
         <span>{formula.rule}</span>
       </p>
       {formula.terms ? (

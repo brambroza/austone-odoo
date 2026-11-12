@@ -95,7 +95,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                 )}
               </Link>
               <div className="min-w-0 flex-1">
-                {product.size && <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">{product.size.label}</span>}
+                {product.size && <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary-ink">{product.size.label}</span>}
                 <p className="truncate text-sm font-medium">{product.name}</p>
                 <p className="text-xs text-muted-foreground">{baht(unit)} /{product.baseUnit}{sale.factor > 1 && <> · {baht(unit * sale.factor)} /{sale.name}</>}</p>
                 <p className="text-xs font-medium">{describeQty(item.qty, product.baseUnit, sale, item.unitQty)}</p>

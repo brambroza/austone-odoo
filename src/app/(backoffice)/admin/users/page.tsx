@@ -147,7 +147,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-1.5">
                           <span className={cn('font-medium', !u.isActive && 'line-through text-muted-foreground')}>{u.name}</span>
-                          {self && <Badge variant="outline" className="border-transparent bg-primary/10 text-primary">คุณ</Badge>}
+                          {self && <Badge variant="outline" className="border-transparent bg-primary/10 text-primary-ink">คุณ</Badge>}
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {u.email}{u.mustChangePassword && ' · รอตั้งรหัสใหม่'}
@@ -223,7 +223,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <span><span className="font-medium">{ROLE_LABELS[r]}</span><span className="block text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[r]}</span></span>
                 </label>
               ))}
-              <Link href="/admin/users/roles" className="inline-block text-xs text-primary hover:underline">ดูตารางสิทธิ์ทุกบทบาท</Link>
+              <Link href="/admin/users/roles" className="inline-block text-xs text-primary-ink hover:underline">ดูตารางสิทธิ์ทุกบทบาท</Link>
             </fieldset>
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">สถานะการใช้งาน</legend>

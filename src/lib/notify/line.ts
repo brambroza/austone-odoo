@@ -39,7 +39,7 @@ export async function linePush(to: string, messages: LineMessage[], token?: stri
  * the web page. Renders well on phones and falls back to `altText` in notifications.
  */
 export function flexCard(input: { title: string; body: string; rows?: { label: string; value: string }[]; button?: { label: string; url: string }; accent?: string }): LineMessage {
-  const accent = input.accent ?? '#d9342b';
+  const accent = input.accent ?? '#1b1319';
   const rows = (input.rows ?? []).map((r) => ({
     type: 'box', layout: 'baseline', spacing: 'sm',
     contents: [

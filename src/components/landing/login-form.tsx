@@ -49,7 +49,7 @@ export function LoginForm() {
       <div data-field className="mt-4">
         <div className="flex items-baseline justify-between gap-2">
           <label htmlFor="password" className="text-sm font-medium">รหัสผ่าน</label>
-          <Link href="/forgot-password" className="text-sm text-[var(--lp-accent)] underline-offset-2 hover:underline">ลืมรหัสผ่าน?</Link>
+          <Link href="/forgot-password" className="text-sm text-[var(--lp-accent-ink)] underline-offset-2 hover:underline">ลืมรหัสผ่าน?</Link>
         </div>
         <div className="relative mt-1">
           <input id="password" name="password" type={show ? 'text' : 'password'} autoComplete="current-password" required className={`${field} mt-0 pr-11`} />

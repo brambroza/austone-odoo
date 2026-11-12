@@ -28,7 +28,7 @@ export function NotFoundState({
   const outline = landing ? 'border-[var(--lp-line)] hover:bg-[var(--lp-accent-soft)]' : 'border-border hover:bg-muted';
   return (
     <div className={`mx-auto my-10 w-full max-w-md rounded-2xl border p-6 text-center shadow-sm ${card}`}>
-      <p className={`text-6xl font-black tracking-tight ${landing ? 'text-[var(--lp-accent)]' : 'text-primary'}`} aria-hidden="true">404</p>
+      <p className={`text-6xl font-black tracking-tight ${landing ? 'text-[var(--lp-accent-ink)]' : 'text-primary-ink'}`} aria-hidden="true">404</p>
       <h1 className="mt-2 text-xl font-extrabold">{title}</h1>
       <p className={`mt-2 text-sm ${muted}`}>{hint}</p>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">

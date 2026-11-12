@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { isUploadedImage, type LandingContent } from '@/lib/landing/cms';
 
 /**
- * Showcase of the real product banners from the 12buy storefront.
+ * Showcase of the product banners from the Austone Thailand website.
  * Desktop stacks the wide artwork; mobile swipes through the tall artwork.
  */
 export function CategoryBanners({ eyebrow, heading, items }: Omit<LandingContent['banners'], 'show'>) {
@@ -13,10 +13,10 @@ export function CategoryBanners({ eyebrow, heading, items }: Omit<LandingContent
     <section className="mx-auto max-w-5xl px-4 py-16" aria-labelledby="banners-heading">
       <div data-reveal className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-[var(--lp-accent)]">{eyebrow}</p>
+          <p className="text-sm font-semibold text-[var(--lp-accent-ink)]">{eyebrow}</p>
           <h2 id="banners-heading" className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">{heading}</h2>
         </div>
-        <Link href="/shop" className="hidden shrink-0 items-center gap-1 text-sm font-semibold text-[var(--lp-accent)] hover:underline sm:inline-flex">
+        <Link href="/shop" className="hidden shrink-0 items-center gap-1 text-sm font-semibold text-[var(--lp-accent-ink)] hover:underline sm:inline-flex">
           ดูทั้งหมด <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
@@ -34,7 +34,7 @@ export function CategoryBanners({ eyebrow, heading, items }: Omit<LandingContent
                   <p className="font-bold">{banner.title}</p>
                   <p className="text-xs text-[var(--lp-muted)]">{banner.brands}</p>
                 </div>
-                <ArrowRight className="size-4 text-[var(--lp-accent)]" aria-hidden="true" />
+                <ArrowRight className="size-4 text-[var(--lp-accent-ink)]" aria-hidden="true" />
               </div>
             </Link>
           </li>
@@ -57,7 +57,7 @@ export function CategoryBanners({ eyebrow, heading, items }: Omit<LandingContent
         ))}
       </ul>
 
-      <Link href="/shop" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-[var(--lp-accent)] hover:underline sm:hidden">
+      <Link href="/shop" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-[var(--lp-accent-ink)] hover:underline sm:hidden">
         ดูสินค้าทั้งหมด <ArrowRight className="size-4" aria-hidden="true" />
       </Link>
     </section>

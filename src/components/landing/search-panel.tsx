@@ -54,7 +54,7 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
   const select = 'h-12 w-full appearance-none rounded-xl border border-white/15 bg-white/10 px-4 pr-10 text-sm font-semibold text-white outline-none transition focus:border-[var(--lp-accent)] focus:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40 [&>option]:text-black';
 
   return (
-    <section id="search" className="scroll-mt-28 bg-[oklch(0.22_0.03_25)] text-white" aria-label="ค้นหาสินค้า">
+    <section id="search" className="scroll-mt-28 bg-[var(--lp-dark)] text-white" aria-label="ค้นหาสินค้า">
       <div className="mx-auto max-w-5xl px-4 pb-6 pt-2">
         <div role="tablist" aria-label="วิธีค้นหา" className="flex gap-6 border-b border-white/15">
           {([['size', 'ค้นหายางตามขนาด', Search], ['brand', 'ค้นหาตามแบรนด์', Tag]] as const).map(([id, label, Icon]) => (
@@ -94,7 +94,7 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
                   </select>
                 </Field>
                 <div className="flex items-end">
-                  <button type="submit" disabled={!width && !text.trim()} className="h-12 w-full rounded-xl bg-[var(--lp-accent)] px-8 text-base font-bold text-white transition hover:brightness-110 disabled:opacity-40 lg:w-auto">ค้นหา</button>
+                  <button type="submit" disabled={!width && !text.trim()} className="h-12 w-full rounded-xl bg-[var(--lp-accent)] px-8 text-base font-bold text-[var(--lp-accent-fg)] transition hover:brightness-110 disabled:opacity-40 lg:w-auto">ค้นหา</button>
                 </div>
               </div>
             ) : (
@@ -106,7 +106,7 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
               <div className="flex flex-1 items-center gap-2">
                 <input value={text} onChange={(e) => setText(e.target.value)} inputMode="search" enterKeyHint="search" placeholder="เช่น 195/65R15 หรือ 1956515" aria-label="พิมพ์ขนาดยาง"
                   className="h-10 w-full max-w-xs rounded-lg border border-white/15 bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[var(--lp-accent)]" />
-                {!hasOptions && <button type="submit" className="h-10 rounded-lg bg-[var(--lp-accent)] px-5 text-sm font-bold text-white">ค้นหา</button>}
+                {!hasOptions && <button type="submit" className="h-10 rounded-lg bg-[var(--lp-accent)] px-5 text-sm font-bold text-[var(--lp-accent-fg)]">ค้นหา</button>}
               </div>
             </div>
           </form>
@@ -125,7 +125,7 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
               </select>
             </Field>
             <div className="flex items-end">
-              <button type="submit" className="h-12 w-full rounded-xl bg-[var(--lp-accent)] px-8 text-base font-bold text-white transition hover:brightness-110 lg:w-auto">ค้นหา</button>
+              <button type="submit" className="h-12 w-full rounded-xl bg-[var(--lp-accent)] px-8 text-base font-bold text-[var(--lp-accent-fg)] transition hover:brightness-110 lg:w-auto">ค้นหา</button>
             </div>
           </form>
         )}

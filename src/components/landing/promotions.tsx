@@ -12,7 +12,7 @@ export function Promotions({ items }: { items: readonly Promotion[] }) {
   return (
     <section id="promo" className="mx-auto max-w-5xl scroll-mt-28 px-4 py-16" aria-labelledby="promo-heading">
       <div data-reveal>
-        <p className="text-sm font-semibold text-[var(--lp-accent)]">โปรโมชัน</p>
+        <p className="text-sm font-semibold text-[var(--lp-accent-ink)]">โปรโมชัน</p>
         <h2 id="promo-heading" className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">ราคาพิเศษดีลเลอร์เดือนนี้</h2>
         <p className="mt-2 max-w-lg text-[var(--lp-muted)]">ราคาโปรโมชันแสดงตามสิทธิ์ของร้านหลังเข้าสู่ระบบ</p>
       </div>
@@ -29,7 +29,7 @@ export function Promotions({ items }: { items: readonly Promotion[] }) {
                 </p>
                 <h3 className="mt-1.5 font-bold leading-snug">{promo.title}</h3>
                 <p className="mt-1 flex-1 text-sm text-[var(--lp-muted)]">{promo.body}</p>
-                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--lp-accent)]">ดูสินค้า <ArrowRight className="size-4" aria-hidden="true" /></span>
+                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--lp-accent-ink)]">ดูสินค้า <ArrowRight className="size-4" aria-hidden="true" /></span>
               </div>
             </Link>
           </li>
