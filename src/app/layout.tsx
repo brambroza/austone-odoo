@@ -10,7 +10,7 @@ import { SITE, siteUrl } from '@/lib/seo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-inter-tight', display: 'swap' });
-const notoThai = Noto_Sans_Thai({ subsets: ['thai', 'latin'], variable: '--font-noto-thai', display: 'swap', weight: ['400', '500', '600', '700', '800'] });
+const notoThai = Noto_Sans_Thai({ subsets: ['thai', 'latin'], variable: '--font-noto-thai', display: 'swap' }); // variable font (100–900); listing weights makes Google return /l/font?kit= URLs that break the Turbopack build
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
