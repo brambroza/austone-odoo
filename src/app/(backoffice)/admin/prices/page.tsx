@@ -28,7 +28,7 @@ const STATUS_BADGE = {
 } as const;
 /** Guess which existing Odoo pricelist seeds each product family (by name). */
 function guessPricelist(pricelists: { id: number; name: string }[], type: DealerType): number | undefined {
-  const pattern = { CAR: /PCR/i, TRUCK: /TBR/i, MOTORCYCLE: /\bMC\b/i, BATTERY: /แบต|battery/i, WHEEL: /ล้อ|wheel/i }[type];
+  const pattern = { CAR: /PCR/i, TRUCK: /TBR/i, WHEEL: /ล้อ|wheel/i }[type];
   return pricelists.find((p) => pattern.test(p.name) && /cash/i.test(p.name))?.id ?? pricelists.find((p) => pattern.test(p.name))?.id;
 }
 const TIERS: DealerTier[] = ['S', 'M', 'L'];

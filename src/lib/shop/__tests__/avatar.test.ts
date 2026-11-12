@@ -50,8 +50,8 @@ describe('profile avatar', () => {
 
 describe('sanitizeProfile typePricelists', () => {
   it('keeps known families with positive integer ids only', () => {
-    const profile = sanitizeProfile({ typePricelists: { CAR: 9, MOTORCYCLE: 7, BOAT: 3, TRUCK: -1, WHEEL: 1.5 } as never, typeCashPricelists: 'x' as never });
-    expect(profile.typePricelists).toEqual({ CAR: 9, MOTORCYCLE: 7 });
+    const profile = sanitizeProfile({ typePricelists: { CAR: 9, TRUCK: 7, MOTORCYCLE: 5, BOAT: 3, WHEEL: 1.5 } as never, typeCashPricelists: 'x' as never });
+    expect(profile.typePricelists).toEqual({ CAR: 9, TRUCK: 7 });
     expect(profile.typeCashPricelists).toEqual({});
   });
 
@@ -66,6 +66,6 @@ describe('sanitizeProfile typePricelists', () => {
 describe('cashPercentsFor', () => {
   it('takes the % of each family pricelist, skipping pricelists without one', () => {
     const percents = [{ pricelistId: 20, percent: 2 }, { pricelistId: 30, percent: 4 }];
-    expect(cashPercentsFor({ CAR: 20, MOTORCYCLE: 30, WHEEL: 99 }, percents)).toEqual({ CAR: 2, MOTORCYCLE: 4 });
+    expect(cashPercentsFor({ CAR: 20, TRUCK: 30, WHEEL: 99 }, percents)).toEqual({ CAR: 2, TRUCK: 4 });
   });
 });

@@ -31,7 +31,7 @@ export const DEFAULT_PROFILE: DealerProfile = {
   avatarFile: null,
 };
 
-const VALID_TYPES: DealerType[] = ['CAR', 'TRUCK', 'MOTORCYCLE', 'BATTERY', 'WHEEL'];
+const VALID_TYPES: DealerType[] = ['CAR', 'TRUCK', 'WHEEL'];
 const VALID_TIERS: DealerTier[] = ['S', 'M', 'L'];
 
 /** Keeps only known families mapped to positive integer pricelist ids. */

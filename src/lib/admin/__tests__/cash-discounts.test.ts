@@ -7,14 +7,14 @@ const products: CatalogProduct[] = [
   base,
   { ...base, id: 2 }, // second variant of the same template
   { ...base, id: 3, tmplId: 20, name: 'ยางรถบรรทุก 11R22.5', code: 'TB1', brand: 'AB', dealerType: 'TRUCK' },
-  { ...base, id: 4, tmplId: 30, name: 'แบตเตอรี่ 50B24', code: 'BT1', brand: 'GS', dealerType: 'BATTERY' },
+  { ...base, id: 4, tmplId: 30, name: 'กระทะล้อ 22.5x8.25', code: 'WH1', brand: 'TM', dealerType: 'WHEEL' },
 ];
 
 describe('cashDiscountProducts', () => {
   it('lists one row per template, filtered by family, search and "only set"', () => {
-    expect(cashDiscountProducts(products, {}, {}).map((p) => p.tmplId)).toEqual([30, 10, 20]);
+    expect(cashDiscountProducts(products, {}, {}).map((p) => p.tmplId)).toEqual([10, 20, 30]);
     expect(cashDiscountProducts(products, {}, { type: 'TRUCK' }).map((p) => p.tmplId)).toEqual([20]);
-    expect(cashDiscountProducts(products, {}, { q: 'gs' }).map((p) => p.tmplId)).toEqual([30]);
+    expect(cashDiscountProducts(products, {}, { q: 'tm' }).map((p) => p.tmplId)).toEqual([30]);
     expect(cashDiscountProducts(products, { '20': { kind: 'BAHT', value: 50 } }, { onlySet: true }).map((p) => p.tmplId)).toEqual([20]);
   });
 });

@@ -458,7 +458,7 @@ function OdooCustomerPanel({ customer: c, odoo, canEdit, writable, dealerId }: {
   );
 }
 
-/** "ยางมอเตอร์ไซค์: Credit TBR · " prefix for families priced by their own pricelist, then "อื่น ๆ: " for the rest. */
+/** "ยางรถบรรทุก: Credit TBR · " prefix for families priced by their own pricelist, then "อื่น ๆ: " for the rest. */
 function typePricelistSummary(dealer: DealerRow, pricelists: OdooPricelistOption[]): string {
   const entries = (Object.entries(dealer.typePricelists ?? {}) as [DealerType, number][]).filter(([t]) => dealer.types.includes(t));
   if (!entries.length) return '';

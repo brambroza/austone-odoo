@@ -15,12 +15,8 @@ export const BRANDS: readonly Brand[] = [
   { name: 'Michelin', code: 'ML', logo: '/landing/brands/michelin.webp' },
   { name: 'Yokohama', code: 'YK', logo: '/landing/brands/yokohama.webp' },
   { name: 'Lanvigator', code: 'LT', logo: '/landing/brands/lanvigator.webp' },
-  { name: 'IRC', code: 'IRC', logo: '/landing/brands/irc.webp' },
   { name: 'Arisun', code: 'AS', logo: '/landing/brands/arisun.webp' },
-  { name: 'SR Moto', code: 'SR', logo: '/landing/brands/sr-moto.webp' },
   { name: 'Camel Max', code: 'CM', logo: '/landing/brands/camel-max.webp' },
-  { name: 'GS Battery', code: 'GS', logo: '/landing/brands/gs-battery.webp' },
-  { name: '3K Battery', code: '3K', logo: '/landing/brands/3k-battery.webp' },
   { name: 'Aonaite', code: 'AN' },
   { name: 'Kpatos', code: 'KT' },
 ];
@@ -35,8 +31,8 @@ export function brandLogo(code: string): string | undefined {
 
 /** Display names for Odoo brand codes. Unknown codes fall back to the code itself. */
 export const BRAND_CODE_NAMES: Record<string, string> = {
-  YK: 'Yokohama', ML: 'Michelin', LT: 'Lanvigator', IRC: 'IRC', AS: 'Arisun', SR: 'SR Moto',
-  CM: 'Camel', GS: 'GS Battery', '3K': '3K Battery', AN: 'Aonaite', KT: 'Kpatos',
+  YK: 'Yokohama', ML: 'Michelin', LT: 'Lanvigator', AS: 'Arisun',
+  CM: 'Camel', AN: 'Aonaite', KT: 'Kpatos',
 };
 
 /** Human-readable brand name for a catalog brand code. */
@@ -45,13 +41,12 @@ export function brandName(code: string): string {
 }
 
 /** Sizes offered as one-tap chips in the hero finder. */
-export const POPULAR_SIZES = ['195/65R15', '265/65R17', '215/55R17', '205/55R16', '11R22.5', '90/90-17'] as const;
+export const POPULAR_SIZES = ['195/65R15', '265/65R17', '215/55R17', '205/55R16', '11R22.5', '295/80R22.5'] as const;
 
 /** Sizes that get a pre-rendered SEO page at `/tires/size/[slug]`. */
 export const SEO_SIZES = [
   '185/60R15', '195/65R15', '215/70R15', '205/55R16', '215/55R17', '215/60R16', '225/50R18', '245/70R16', '265/65R17', '265/60R18', '265/70R16',
   '11R22.5', '295/80R22.5', '12R22.5', '10.00R20',
-  '90/90-17', '70/90-17', '100/80-17', '120/70ZR17', '80/90-14', '110/70-17',
 ] as const;
 
 /** `195/65R15` → `195-65r15`, `11R22.5` → `11r22.5`. Lowercase, URL-safe, reversible enough for search. */

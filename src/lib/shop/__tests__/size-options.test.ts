@@ -4,8 +4,8 @@ import { buildSizeOptions, partValues, sizeQuery, splitSize } from '@/lib/shop/s
 
 import type { DealerType } from '@/lib/shop/types';
 
-const TYPES: DealerType[] = ['CAR', 'CAR', 'CAR', 'TRUCK', 'MOTORCYCLE', 'CAR', 'BATTERY'];
-const products = ['195/65R15', '195/60R15', '205/55R16', '11R22.5', '90/90-17', '33x12.50R20', 'แบตเตอรี่ 3K N100'].map((name, i) => ({
+const TYPES: DealerType[] = ['CAR', 'CAR', 'CAR', 'TRUCK', 'TRUCK', 'CAR', 'WHEEL'];
+const products = ['195/65R15', '195/60R15', '205/55R16', '11R22.5', '295/80R22.5', '33x12.50R20', 'กระทะล้อ TM 22.5'].map((name, i) => ({
   size: parseSize(name),
   dealerType: TYPES[i],
 }));
@@ -25,7 +25,7 @@ describe('buildSizeOptions / partValues', () => {
   const options = buildSizeOptions(products);
 
   it('dedupes, skips non-sizes and sorts numerically', () => {
-    expect(options.map((o) => o.label)).toEqual(['11R22.5', '33x12.50R20', '90/90-17', '195/60R15', '195/65R15', '205/55R16']);
+    expect(options.map((o) => o.label)).toEqual(['11R22.5', '33x12.50R20', '195/60R15', '195/65R15', '205/55R16', '295/80R22.5']);
   });
 
   it('narrows widths by family and cascades aspect → rim', () => {

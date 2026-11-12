@@ -15,11 +15,11 @@ const SAMPLE: DemoRow[] = [
   { brand: 'ยี่ห้อ C', model: 'Sport', size: '195/65R15', price: 2490, stock: 'เหลือน้อย' },
   { brand: 'ยี่ห้อ A', model: 'Radial', size: '11R22.5', price: 7900, stock: 'มี' },
   { brand: 'ยี่ห้อ D', model: 'Mixed', size: '11R22.5', price: 8450, stock: 'สั่งจอง' },
-  { brand: 'ยี่ห้อ E', model: 'City', size: '90/90-17', price: 690, stock: 'มี' },
-  { brand: 'ยี่ห้อ F', model: 'Grip', size: '90/90-17', price: 790, stock: 'มี' },
+  { brand: 'ยี่ห้อ A', model: 'SUV H/T', size: '265/65R17', price: 3290, stock: 'มี' },
+  { brand: 'ยี่ห้อ B', model: 'All Terrain', size: '265/65R17', price: 3590, stock: 'เหลือน้อย' },
 ];
 
-const CHIPS = ['195/65R15', '11R22.5', '90/90-17'];
+const CHIPS = ['195/65R15', '265/65R17', '11R22.5'];
 
 /**
  * Interactive "type a size, see your price" demo for the landing page.

@@ -13,8 +13,8 @@ const catalog: Catalog = {
     product(1, 'ยาง 195/65R15 AL30', 'YK-PCR', 2550),
     product(2, 'ยาง 195/65R15 COMFORT II', 'LT-PCR', 2300),
     product(3, 'Aonaite 11R22.5 16PR 668', 'AN-TBR', 6200),
-    product(4, 'ยาง 80/90-17 4PR H-502 TT', 'AS-MC', 400),
-    product(5, 'แบตเตอรี่ GS Extra 120L', 'GS-BT', 3000),
+    product(4, 'ยาง 295/80R22.5 18PR AT115', 'AT-TBR', 8400),
+    product(5, 'กระทะล้อ 22.5x8.25 10 รู', 'TM-WH', 3000),
   ],
   pricelists: [],
   priceCtx: { itemsByPricelist: new Map(), categoryParents: new Map() },
@@ -25,8 +25,8 @@ describe('classifyCategory', () => {
   it('maps Odoo category suffixes to dealer types', () => {
     expect(classifyCategory('YK-PCR')).toEqual({ brand: 'YK', dealerType: 'CAR' });
     expect(classifyCategory('AN-TBR')).toEqual({ brand: 'AN', dealerType: 'TRUCK' });
-    expect(classifyCategory('IRC-MC')).toEqual({ brand: 'IRC', dealerType: 'MOTORCYCLE' });
-    expect(classifyCategory('GS-BT')).toEqual({ brand: 'GS', dealerType: 'BATTERY' });
+    expect(classifyCategory('IRC-MC')).toBeNull();
+    expect(classifyCategory('GS-BT')).toBeNull();
     expect(classifyCategory('TM-WH')).toEqual({ brand: 'TM', dealerType: 'WHEEL' });
     expect(classifyCategory('Deliveries')).toBeNull();
     expect(classifyCategory('Food')).toBeNull();
@@ -36,14 +36,14 @@ describe('classifyCategory', () => {
 describe('searchProducts', () => {
   it('restricts to the dealer types', () => {
     expect(searchProducts(catalog, { types: ['CAR'] }).map((p) => p.id)).toEqual([1, 2]);
-    expect(searchProducts(catalog, { types: ['CAR', 'TRUCK'], type: 'TRUCK' }).map((p) => p.id)).toEqual([3]);
+    expect(searchProducts(catalog, { types: ['CAR', 'TRUCK'], type: 'TRUCK' }).map((p) => p.id)).toEqual([3, 4]);
   });
 
   it('matches size queries in several spellings', () => {
     for (const q of ['195/65R15', '1956515', '195 65 15']) {
-      expect(searchProducts(catalog, { query: q, types: ['CAR', 'TRUCK', 'MOTORCYCLE'] }).map((p) => p.id)).toEqual([1, 2]);
+      expect(searchProducts(catalog, { query: q, types: ['CAR', 'TRUCK', 'WHEEL'] }).map((p) => p.id)).toEqual([1, 2]);
     }
-    expect(searchProducts(catalog, { query: '8090-17', types: ['MOTORCYCLE'] }).map((p) => p.id)).toEqual([4]);
+    expect(searchProducts(catalog, { query: '2958022.5', types: ['TRUCK'] }).map((p) => p.id)).toEqual([4]);
   });
 
   it('does not leak other types even when the size matches', () => {
@@ -67,6 +67,6 @@ describe('helpers', () => {
   it('suggests sensible default quantities', () => {
     expect(defaultQty('CAR')).toBe(4);
     expect(defaultQty('TRUCK')).toBe(2);
-    expect(defaultQty('BATTERY')).toBe(1);
+    expect(defaultQty('WHEEL')).toBe(1);
   });
 });

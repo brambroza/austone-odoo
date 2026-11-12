@@ -18,9 +18,9 @@ describe('units', () => {
   });
 
   it('lists base unit first then packs ascending', () => {
-    const units = unitsForProduct('MOTORCYCLE', 1, [33, 32, 999], index);
+    const units = unitsForProduct('TRUCK', 1, [33, 32, 999], index);
     expect(units.map((u) => `${u.name}:${u.factor}`)).toEqual(['เส้น:1', 'มัด 3 เส้น:3', 'มัด 5 เส้น:5']);
-    expect(unitsForProduct('BATTERY', 1, [], index)).toEqual([{ id: 1, name: 'ลูก', factor: 1 }]);
+    expect(unitsForProduct('WHEEL', 1, [], index)).toEqual([{ id: 1, name: 'วง', factor: 1 }]);
     expect(baseUnitLabel('WHEEL')).toBe('วง');
   });
 
@@ -32,8 +32,8 @@ describe('units', () => {
   });
 
   it('defaults to the smallest Odoo packaging, else the base unit', () => {
-    expect(defaultSaleUnit(unitsForProduct('MOTORCYCLE', 1, [33], index))?.name).toBe('มัด 5 เส้น');
-    expect(defaultSaleUnit(unitsForProduct('MOTORCYCLE', 1, [33, 32], index))?.name).toBe('มัด 3 เส้น');
+    expect(defaultSaleUnit(unitsForProduct('TRUCK', 1, [33], index))?.name).toBe('มัด 5 เส้น');
+    expect(defaultSaleUnit(unitsForProduct('TRUCK', 1, [33, 32], index))?.name).toBe('มัด 3 เส้น');
     expect(defaultSaleUnit(unitsForProduct('CAR', 1, [], index))?.name).toBe('เส้น');
     expect(defaultSaleUnit([])).toBeUndefined();
   });

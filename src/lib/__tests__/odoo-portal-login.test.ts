@@ -31,7 +31,7 @@ describe('createDealerFromPartner', () => {
     await createDealerFromPartner(company as never, { note: 'n' });
     expect(repo.createDealer).toHaveBeenCalledWith(expect.objectContaining({
       name: 'บจก. ยางดี', province: 'สมุทรสาคร', tier: 'M', status: 'ACTIVE', odooPartnerId: 40, phone: '021234567',
-      taxId: '0105556123456', address: '9 ถ.พระราม 2 10150', types: ['CAR', 'TRUCK', 'MOTORCYCLE', 'BATTERY', 'WHEEL'],
+      taxId: '0105556123456', address: '9 ถ.พระราม 2 10150', types: ['CAR', 'TRUCK', 'WHEEL'],
     }));
     expect(repo.updateDealer).toHaveBeenCalledWith('d1', { approvedAt: expect.any(Date) });
   });

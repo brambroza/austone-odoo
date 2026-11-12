@@ -23,7 +23,7 @@ import { formatAmount } from '@/lib/money';
 import { ORDER_STATUS_LABELS, type DealerType, type ProtoOrder } from '@/lib/shop/types';
 
 const tierSchema = z.enum(['S', 'M', 'L']);
-const typeSchema = z.enum(['CAR', 'TRUCK', 'MOTORCYCLE', 'BATTERY', 'WHEEL']);
+const typeSchema = z.enum(['CAR', 'TRUCK', 'WHEEL']);
 
 /** Back to the admin page the form was posted from (keeps its drawer, search, filter and page), with `changes` applied. */
 async function back(prefix: string, changes: Record<string, string | undefined> = {}): Promise<string> {

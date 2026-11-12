@@ -211,7 +211,7 @@ export default async function DeliveryPage({ searchParams }: { searchParams: Pro
               <input type="hidden" name="id" value={editing.id} />
               <div>
                 <h3 className="text-sm font-semibold">ส่วนลดค่าขนส่งในบิล</h3>
-                <p className="text-xs text-muted-foreground">บาทต่อหน่วย หักในบิลทุกวิธีชำระเมื่อลูกค้าใช้ “{editing.name}” · เว้นว่างหรือ 0 = ไม่ลด · มอเตอร์ไซค์นับเป็นมัดเต็มตาม packaging ใน Odoo (เศษไม่ครบมัดไม่ลด) · บันทึกบนเว็บ ไม่เขียน Odoo</p>
+                <p className="text-xs text-muted-foreground">บาทต่อหน่วย หักในบิลทุกวิธีชำระเมื่อลูกค้าใช้ “{editing.name}” · เว้นว่างหรือ 0 = ไม่ลด · บันทึกบนเว็บ ไม่เขียน Odoo</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {FREIGHT_TYPES.map((type) => (

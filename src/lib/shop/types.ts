@@ -1,16 +1,18 @@
 import type { CustomerGroup, PriceBook, ProductCashDiscount } from '@/lib/admin/types';
 import type { ThaiAddress } from '@/lib/thai-address';
 
-/** Product family a dealer is allowed to buy, derived from the Odoo category suffix. */
-export type DealerType = 'CAR' | 'TRUCK' | 'MOTORCYCLE' | 'BATTERY' | 'WHEEL';
+/**
+ * Product family a dealer is allowed to buy, derived from the Odoo category suffix.
+ * AUSTONE sells only car tyres, truck tyres and wheels; the DB enum still holds the old
+ * MOTORCYCLE / BATTERY values, but the app drops them everywhere (catalog, forms, filters).
+ */
+export type DealerType = 'CAR' | 'TRUCK' | 'WHEEL';
 
 export type DealerTier = 'S' | 'M' | 'L';
 
 export const DEALER_TYPE_LABELS: Record<DealerType, string> = {
   CAR: 'ยางรถยนต์',
   TRUCK: 'ยางรถบรรทุก',
-  MOTORCYCLE: 'ยางมอเตอร์ไซค์',
-  BATTERY: 'แบตเตอรี่',
   WHEEL: 'กระทะล้อ',
 };
 

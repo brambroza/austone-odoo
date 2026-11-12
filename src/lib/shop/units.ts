@@ -8,7 +8,7 @@ export type RawUom = { id: number; name: string; relative_factor: number; relati
 
 /** Thai label for the base unit of each product family. */
 export function baseUnitLabel(type: DealerType): string {
-  return type === 'BATTERY' ? 'ลูก' : type === 'WHEEL' ? 'วง' : 'เส้น';
+  return type === 'WHEEL' ? 'วง' : 'เส้น';
 }
 
 /** Resolves every Odoo unit to an absolute factor against its root unit (e.g. มัด 3 เส้น → 3). */

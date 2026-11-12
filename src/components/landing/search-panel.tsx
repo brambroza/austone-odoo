@@ -2,13 +2,21 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Search, Tag } from 'lucide-react';
+import Link from 'next/link';
+import { Car, ChevronDown, CircleDot, Search, Tag, Truck } from 'lucide-react';
 import { partValues, sizeQuery, type SizeOption } from '@/lib/shop/size-options';
 import { DEALER_TYPE_LABELS, type DealerType } from '@/lib/shop/types';
 
 type Tab = 'size' | 'brand';
-const TYRE_TYPES: DealerType[] = ['CAR', 'TRUCK', 'MOTORCYCLE'];
+/** Families searchable by tyre size (wheels have no tyre size). */
+const TYRE_TYPES: DealerType[] = ['CAR', 'TRUCK'];
 const ALL_TYPES = Object.keys(DEALER_TYPE_LABELS) as DealerType[];
+/** One-tap shortcuts to each AUSTONE product family. */
+const CATEGORY_SHORTCUTS: { type: DealerType; icon: typeof Car; note: string }[] = [
+  { type: 'CAR', icon: Car, note: 'รถเก๋ง กระบะ SUV' },
+  { type: 'TRUCK', icon: Truck, note: 'TBR ทุกขนาด' },
+  { type: 'WHEEL', icon: CircleDot, note: 'รถยนต์และรถบรรทุก' },
+];
 
 export type BrandOption = { brand: string; name: string; count: number };
 
@@ -32,6 +40,8 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
   const aspects = useMemo(() => (width ? partValues(sizes, 'aspect', { type, width }) : []), [sizes, type, width]);
   const rims = useMemo(() => (width && aspect !== undefined ? (partValues(sizes, 'rim', { type, width, aspect }) as string[]) : []), [sizes, type, width, aspect]);
   const hasOptions = sizes.length > 0;
+  /** Brand picker only makes sense when the catalog holds more than one brand. */
+  const showBrands = brands.length > 1;
 
   const pickType = (next: DealerType | undefined) => { setType(next); setWidth(''); setAspect(undefined); setRim(''); };
   const pickWidth = (v: string) => { setWidth(v); setRim(''); const a = v ? partValues(sizes, 'aspect', { type, width: v }) : []; setAspect(a.length === 1 ? a[0] : undefined); };
@@ -57,7 +67,7 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
     <section id="search" className="scroll-mt-28 bg-[var(--lp-dark)] text-white" aria-label="ค้นหาสินค้า">
       <div className="mx-auto max-w-5xl px-4 pb-6 pt-2">
         <div role="tablist" aria-label="วิธีค้นหา" className="flex gap-6 border-b border-white/15">
-          {([['size', 'ค้นหายางตามขนาด', Search], ['brand', 'ค้นหาตามแบรนด์', Tag]] as const).map(([id, label, Icon]) => (
+          {([['size', 'ค้นหายางตามขนาด', Search], ['brand', showBrands ? 'ค้นหาตามหมวด / แบรนด์' : 'ค้นหาตามหมวดสินค้า', Tag]] as const).map(([id, label, Icon]) => (
             <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}
               className={`-mb-px inline-flex items-center gap-2 border-b-[3px] px-1 py-3 text-sm font-bold transition sm:text-base ${tab === id ? 'border-[var(--lp-accent)] text-white' : 'border-transparent text-white/60 hover:text-white'}`}>
               <Icon className="size-4" aria-hidden="true" /> {label}
@@ -111,13 +121,13 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
             </div>
           </form>
         ) : (
-          <form onSubmit={submitBrand} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]" role="search">
-            <Field label="แบรนด์">
+          <form onSubmit={submitBrand} className={`mt-5 grid gap-3 ${showBrands ? 'sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]' : 'sm:grid-cols-[1fr_auto]'}`} role="search">
+            {showBrands && <Field label="แบรนด์">
               <select aria-label="แบรนด์" value={brand} onChange={(e) => setBrand(e.target.value)} className={select}>
                 <option value="">ทุกแบรนด์</option>
                 {brands.map((b) => <option key={b.brand} value={b.brand}>{b.name} ({b.count})</option>)}
               </select>
-            </Field>
+            </Field>}
             <Field label="หมวดสินค้า">
               <select aria-label="หมวดสินค้า" value={brandType} onChange={(e) => setBrandType(e.target.value as DealerType | '')} className={select}>
                 <option value="">ทุกหมวด</option>
@@ -129,6 +139,19 @@ export function SearchPanel({ sizes, brands }: { sizes: SizeOption[]; brands: Br
             </div>
           </form>
         )}
+
+        <nav aria-label="หมวดสินค้า" className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+          {CATEGORY_SHORTCUTS.map(({ type: t, icon: Icon, note }) => (
+            <Link key={t} href={`/tires?type=${t}`}
+              className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-white/5 px-2 py-3 text-center transition hover:border-[var(--lp-accent)] hover:bg-white/10 sm:flex-row sm:gap-3 sm:px-4 sm:text-left">
+              <Icon className="size-6 shrink-0 text-[var(--lp-accent)]" aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">{DEALER_TYPE_LABELS[t]}</span>
+                <span className="hidden text-xs text-white/60 sm:block">{note}</span>
+              </span>
+            </Link>
+          ))}
+        </nav>
       </div>
     </section>
   );

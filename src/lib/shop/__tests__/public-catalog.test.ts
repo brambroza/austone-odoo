@@ -12,8 +12,8 @@ const catalog: Catalog = {
   products: [
     product(1, 'YOKOHAMA 195/65R15 BluEarth', 'YK', 'CAR', 12),
     product(2, 'MICHELIN 195/65R15 Primacy', 'MI', 'CAR', 3),
-    product(3, 'IRC 90/90-17 NR77', 'IRC', 'MOTORCYCLE', 0),
-    product(4, 'GS MFX-60L', 'GS', 'BATTERY', 50),
+    product(3, 'AUSTONE 11R22.5 AT115', 'AT', 'TRUCK', 0),
+    product(4, 'TM กระทะล้อ 22.5x8.25', 'TM', 'WHEEL', 50),
   ],
   pricelists: [],
   priceCtx: { itemsByPricelist: new Map(), categoryParents: new Map() },
@@ -44,14 +44,14 @@ describe('publicSearch', () => {
   });
 
   it('filters by type and brand', () => {
-    expect(publicSearch(catalog, { type: 'MOTORCYCLE' }).map((h) => h.id)).toEqual([3]);
-    expect(publicSearch(catalog, { brand: 'gs' }).map((h) => h.id)).toEqual([4]);
+    expect(publicSearch(catalog, { type: 'TRUCK' }).map((h) => h.id)).toEqual([3]);
+    expect(publicSearch(catalog, { brand: 'tm' }).map((h) => h.id)).toEqual([4]);
   });
 });
 
 describe('listBrands / parseDealerType', () => {
   it('counts products per brand, optionally per type', () => {
-    expect(listBrands(catalog).map((b) => b.brand)).toEqual(['GS', 'IRC', 'MI', 'YK']);
+    expect(listBrands(catalog).map((b) => b.brand)).toEqual(['AT', 'MI', 'TM', 'YK']);
     expect(listBrands(catalog, 'CAR')).toEqual([{ brand: 'MI', name: 'MI', count: 1 }, { brand: 'YK', name: 'Yokohama', count: 1 }]);
   });
 

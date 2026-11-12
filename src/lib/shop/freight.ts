@@ -15,10 +15,10 @@ export type FreightRates = Partial<Record<DealerType, number>>;
 export type FreightDiscounts = Record<string, FreightRates>;
 
 /** Families whose freight discount counts whole packs (มัด) instead of base units. */
-export const FREIGHT_PER_PACK: ReadonlySet<DealerType> = new Set<DealerType>(['MOTORCYCLE']);
+export const FREIGHT_PER_PACK: ReadonlySet<DealerType> = new Set<DealerType>();
 
 /** Order of the families on the admin form and in summaries. */
-export const FREIGHT_TYPES: DealerType[] = ['TRUCK', 'CAR', 'WHEEL', 'MOTORCYCLE', 'BATTERY'];
+export const FREIGHT_TYPES: DealerType[] = ['TRUCK', 'CAR', 'WHEEL'];
 
 export const MAX_FREIGHT_RATE = 100_000;
 

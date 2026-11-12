@@ -37,7 +37,7 @@ export type Catalog = {
 const CATALOG_TTL_MS = 5 * 60 * 1000;
 /** Odoo domain for web-sellable products: can be sold, has a category, published on the website. */
 export const PRODUCT_DOMAIN = [['sale_ok', '=', true], ['is_published', '=', true], ['categ_id', '!=', false]];
-const SUFFIX_TO_TYPE: Record<string, DealerType> = { PCR: 'CAR', TBR: 'TRUCK', MC: 'MOTORCYCLE', BT: 'BATTERY', WH: 'WHEEL' };
+const SUFFIX_TO_TYPE: Record<string, DealerType> = { PCR: 'CAR', TBR: 'TRUCK', WH: 'WHEEL' };
 
 let catalogCache: { value: Catalog; expiresAt: number } | null = null;
 let catalogInFlight: Promise<Catalog> | null = null;
@@ -201,7 +201,7 @@ export function baht(value: number): string {
 
 /** Suggested default order quantity per product family. */
 export function defaultQty(type: DealerType): number {
-  return { CAR: 4, TRUCK: 2, MOTORCYCLE: 2, BATTERY: 1, WHEEL: 1 }[type];
+  return { CAR: 4, TRUCK: 2, WHEEL: 1 }[type];
 }
 
 export type Partner = {

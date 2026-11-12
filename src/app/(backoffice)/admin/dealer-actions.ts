@@ -27,7 +27,7 @@ import { PROVINCES } from '@/lib/provinces';
 import { DEALER_COOKIE, encodeProfile, profileFromDealer } from '@/lib/shop/dealer';
 import { flash } from '@/lib/flash';
 
-const typeSchema = z.enum(['CAR', 'TRUCK', 'MOTORCYCLE', 'BATTERY', 'WHEEL']);
+const typeSchema = z.enum(['CAR', 'TRUCK', 'WHEEL']);
 const tierSchema = z.enum(['S', 'M', 'L']);
 const statusSchema = z.enum(['PENDING', 'ACTIVE', 'SUSPENDED']);
 const provinceSchema = z.string().trim().refine((p) => (PROVINCES as readonly string[]).includes(p), 'เลือกจังหวัด');

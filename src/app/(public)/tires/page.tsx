@@ -13,7 +13,7 @@ export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'แคตตาล็อกยางราคาส่งสำหรับดีลเลอร์ ค้นหาตามขนาดและแบรนด์',
-  description: `ดูรายการยางรถยนต์ ยางรถบรรทุก ยางมอเตอร์ไซค์ และแบตเตอรี่ทุกแบรนด์ที่ ${SITE.name} จำหน่าย ค้นหาด้วยขนาดยาง ราคาดีลเลอร์แสดงหลังเข้าสู่ระบบ`,
+  description: `ดูรายการยางรถยนต์ ยางรถบรรทุก และกระทะล้อที่ ${SITE.name} จำหน่าย ค้นหาด้วยขนาดยาง ราคาดีลเลอร์แสดงหลังเข้าสู่ระบบ`,
   alternates: { canonical: absoluteUrl('/tires') },
 };
 
@@ -33,7 +33,7 @@ export default async function TiresPage({ searchParams }: { searchParams: Promis
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(crumbs)) }} />
       <Crumbs crumbs={crumbs} />
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{type ? `${DEALER_TYPE_LABELS[type]}ราคาส่งสำหรับดีลเลอร์` : 'แคตตาล็อกยางและแบตเตอรี่สำหรับดีลเลอร์'}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{type ? `${DEALER_TYPE_LABELS[type]}ราคาส่งสำหรับดีลเลอร์` : 'แคตตาล็อกยางและกระทะล้อสำหรับดีลเลอร์'}</h1>
         <p className="mt-2 max-w-2xl text-[var(--lp-muted)]">พิมพ์ขนาดยางเพื่อดูทุกแบรนด์ที่มี ราคาของร้านแสดงหลังเข้าสู่ระบบ</p>
         <div className="mt-4"><SizeSearch basePath="/tires/search" /></div>
       </header>

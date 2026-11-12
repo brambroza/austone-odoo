@@ -56,12 +56,12 @@ describe('pricelist per product family', () => {
   const big: PricelistItem = { ...fixed, id: 4, pricelistId: 20, fixedPrice: 2100 };
   const bigCash: PricelistItem = { ...fixed, id: 5, pricelistId: 21, fixedPrice: 2000 };
   const familyCatalog: Catalog = { ...catalog, priceCtx: { itemsByPricelist: new Map([[9, [fixed]], [20, [big]], [21, [bigCash]]]), categoryParents: new Map() } };
-  const motorcycle: CatalogProduct = { ...product, id: 800, dealerType: 'MOTORCYCLE' };
+  const truck: CatalogProduct = { ...product, id: 800, dealerType: 'TRUCK' };
 
   it('prices a family from its own pricelist and leaves other families alone', () => {
-    const goalong: DealerProfile = { ...profile, types: ['CAR', 'MOTORCYCLE'], typePricelists: { CAR: 20 } };
+    const goalong: DealerProfile = { ...profile, types: ['CAR', 'TRUCK'], typePricelists: { CAR: 20 } };
     expect(resolvePrice(familyCatalog, product, goalong)).toBe(2100);
-    expect(resolvePrice(familyCatalog, motorcycle, goalong)).toBe(2400); // dealer pricelist 9
+    expect(resolvePrice(familyCatalog, truck, goalong)).toBe(2400); // dealer pricelist 9
   });
   it('wins over a published web price book', () => {
     const withBook: DealerProfile = { ...profile, typePricelists: { CAR: 20 }, priceBook: book({ entries: { '777': 2300 } }) };
