@@ -19,7 +19,7 @@ export const SITE = {
   description:
     'ระบบสั่งซื้อยาง AUSTONE สำหรับดีลเลอร์ ยางรถยนต์ ยางรถบรรทุก และกระทะล้อ จากบริษัท ออสโตน (ไทยแลนด์) จำกัด ตัวแทนจำหน่ายยาง AUSTONE เพียงรายเดียวในประเทศไทย ค้นหาด้วยขนาด เห็นราคาของร้านทันที รับประกันยางรถยนต์ 120 วัน ยางรถบรรทุก 100 วัน',
   locale: 'th_TH',
-  lineId: '@agu2477n',
+  lineId: '@austone',
   phone: '02-711-5656',
   facebook: 'https://www.facebook.com/profile.php?id=100064109706066',
   keywords: [
