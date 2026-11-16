@@ -4,7 +4,7 @@
  */
 
 export type PriceGroup = 'RETAIL' | 'WHOLESALE' | 'OTHER';
-export type RateKind = 'PERCENT' | 'PER_UNIT';
+export type RateKind = 'PERCENT' | 'PERCENT_GROSS' | 'PER_UNIT';
 export type RunStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'PAID';
 export type LedgerKind = 'COLLECTION' | 'RETRO';
 /** Where the rep of a line came from: the customer's "Sale …" tag, else the salesperson of the invoice / sale order / customer. */
@@ -34,7 +34,7 @@ export type StatementSettings = {
   /** % of the unpaid amount before VAT held per overdue invoice (given back when it is collected). */
   debtPercent: number;
 };
-export const RATE_KIND_LABELS: Record<RateKind, string> = { PERCENT: '% ของยอดก่อน VAT', PER_UNIT: 'บาท/หน่วย' };
+export const RATE_KIND_LABELS: Record<RateKind, string> = { PERCENT: '% ของยอดก่อน VAT', PERCENT_GROSS: '% ของยอดรวม VAT', PER_UNIT: 'บาท/หน่วย' };
 export const RUN_STATUS_LABELS: Record<RunStatus, string> = { DRAFT: 'ร่าง', PENDING_APPROVAL: 'รออนุมัติ', APPROVED: 'อนุมัติแล้ว', PAID: 'จ่ายแล้ว' };
 /** Badge colours per run status (Tailwind classes). */
 export const RUN_STATUS_TONE: Record<RunStatus, string> = {

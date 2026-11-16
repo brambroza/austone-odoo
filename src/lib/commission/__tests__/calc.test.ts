@@ -99,6 +99,13 @@ describe('lineCommission', () => {
     expect(rateLabel({ kind: 'PER_UNIT', value: 15 })).toBe('฿15/หน่วย');
   });
 
+  it('pays a percent of the amount including VAT', () => {
+    const gross = [rate({ kind: 'PERCENT_GROSS', value: 1, priceGroup: '*' })];
+    // base 10,000 + VAT 7% = 10,700 → 1% = 107
+    expect(lineCommission(line({ base: 10_000, gross: 10_700, overdueDays: 12 }), { rates: gross, steps: STEPS }, PRICELISTS[0]).commission).toBeCloseTo(107, 6);
+    expect(rateLabel({ kind: 'PERCENT_GROSS', value: 1 })).toBe('1% (รวม VAT)');
+  });
+
   it('explains rules that start after the cash date', () => {
     const late = lineCommission(line({ cashDate: '2026-10-08' }), { rates: [rate({ validFrom: '2026-11-04' })], steps: STEPS }, PRICELISTS[0]);
     expect(late.commission).toBe(0);

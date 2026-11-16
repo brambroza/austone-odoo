@@ -182,6 +182,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
               <label className={label}>ชนิด
                 <select name="kind" defaultValue="PERCENT" className={input}>
                   <option value="PERCENT">% ของยอดก่อน VAT</option>
+                  <option value="PERCENT_GROSS">% ของยอดรวม VAT</option>
                   <option value="PER_UNIT">บาท ต่อหน่วยที่ขาย</option>
                 </select>
               </label>

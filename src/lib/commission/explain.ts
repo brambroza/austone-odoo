@@ -3,7 +3,7 @@
  * drill-down: which rate rule matched, then base × rate × special-price % × overdue step = commission.
  * Pure; reads only the line, its result and the rates the run was calculated with.
  */
-import { excludedReasonOf, stepRangeLabel } from './calc';
+import { basicAmount, excludedReasonOf, stepRangeLabel } from './calc';
 import { EXCLUDED_LABELS, PRICE_GROUP_LABELS, type CommissionRate, type LedgerLine, type LineResult } from './types';
 
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -44,19 +44,19 @@ export function lineFormula(line: LedgerLine, result: LineResult | undefined, ra
     : result.rateLabel;
   const basic = rate?.kind === 'PER_UNIT' || result.rateLabel.includes('/หน่วย')
     ? `${units.format(line.qty)} หน่วย × ${result.rateLabel.replace('/หน่วย', '')}`
-    : `${money.format(line.base)} × ${result.rateLabel}`;
-  const basicAmount = rate
-    ? (rate.kind === 'PERCENT' ? (line.base * rate.value) / 100 : line.qty * rate.value)
+    : `${money.format(rate?.kind === 'PERCENT_GROSS' ? line.gross : line.base)} × ${result.rateLabel.replace(' (รวม VAT)', '%')}`;
+  const basicValue = rate
+    ? basicAmount(rate, line)
     : result.specialPercent ? ((result.beforeStep ?? 0) * 100) / result.specialPercent : 0;
-  const parts = [`${basic} = ${money.format(basicAmount)}`];
-  if (result.specialPercent !== 100) parts.push(`× ${result.specialPercent}% (ราคาพิเศษ) = ${money.format((basicAmount * result.specialPercent) / 100)}`);
+  const parts = [`${basic} = ${money.format(basicValue)}`];
+  if (result.specialPercent !== 100) parts.push(`× ${result.specialPercent}% (ราคาพิเศษ) = ${money.format((basicValue * result.specialPercent) / 100)}`);
   const days = line.overdueDays ?? 0;
   const range = result.noSteps ? ' · ไม่ได้ตั้งขั้นบันได' : result.stepRange === undefined ? '' : ` · ขั้น ${stepRangeLabel(result.stepRange)}`;
   parts.push(`× ${result.stepPercent}% (เกินดิว ${days} วัน${range}) = ${money.format(result.commission)}`);
   const perUnit = rate?.kind === 'PER_UNIT' || result.rateLabel.includes('/หน่วย');
   const terms: FormulaTerm[] = [
-    perUnit ? { label: 'จำนวน', value: `${units.format(line.qty)} หน่วย` } : { label: 'ยอดก่อน VAT', value: money.format(line.base) },
-    { label: perUnit ? 'บาท / หน่วย' : 'อัตรา', value: result.rateLabel.replace('/หน่วย', '') },
+    perUnit ? { label: 'จำนวน', value: `${units.format(line.qty)} หน่วย` } : rate?.kind === 'PERCENT_GROSS' ? { label: 'ยอดรวม VAT', value: money.format(line.gross) } : { label: 'ยอดก่อน VAT', value: money.format(line.base) },
+    { label: perUnit ? 'บาท / หน่วย' : 'อัตรา', value: result.rateLabel.replace('/หน่วย', '').replace(' (รวม VAT)', '') },
   ];
   if (result.specialPercent !== 100) terms.push({ label: 'ราคาพิเศษ', value: `${result.specialPercent}%`, tone: 'down' });
   terms.push({

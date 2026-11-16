@@ -1,6 +1,6 @@
 /**
  * Commission calculator. Per ledger line:
- *   rate (% of base before VAT, or baht per unit) × special-price % × overdue-step %
+ *   rate (% of base before VAT, % of base incl. VAT, or baht per unit) × special-price % × overdue-step %
  * then per rep: no pay when the period's collected base is below the target (gate), statement rows,
  * central fund and overdue-invoice deductions, manual adjustments and any negative balance carried
  * from the previous period. Pure, no I/O.
@@ -90,7 +90,14 @@ export function stepProblems(steps: readonly Pick<OverdueStep, 'minDays' | 'maxD
 
 /** Short description of a rate for the result table, e.g. "0.9%" or "฿15/หน่วย". */
 export function rateLabel(rate: Pick<CommissionRate, 'kind' | 'value'>): string {
-  return rate.kind === 'PERCENT' ? `${rate.value}%` : `฿${rate.value}/หน่วย`;
+  if (rate.kind === 'PER_UNIT') return `฿${rate.value}/หน่วย`;
+  return rate.kind === 'PERCENT_GROSS' ? `${rate.value}% (รวม VAT)` : `${rate.value}%`;
+}
+
+/** Commission before special-price and overdue-step scaling: % of base before VAT, % of base incl. VAT, or baht × qty. */
+export function basicAmount(rate: Pick<CommissionRate, 'kind' | 'value'>, line: Pick<LedgerLine, 'base' | 'gross' | 'qty'>): number {
+  if (rate.kind === 'PER_UNIT') return line.qty * rate.value;
+  return ((rate.kind === 'PERCENT_GROSS' ? line.gross : line.base) * rate.value) / 100;
 }
 
 export type CalcInput = {
@@ -152,7 +159,7 @@ export function lineCommission(line: LedgerLine, input: Pick<CalcInput, 'rates' 
     const hint = later ? ` (มีอัตราแต่เริ่มใช้ ${later.validFrom} หลังวันเงินเข้า ${line.cashDate})` : '';
     return { ...empty, specialPercent, stepPercent, issue: `ไม่มีอัตราค่าคอมสำหรับ ${where}${hint}` };
   }
-  const basic = rate.kind === 'PERCENT' ? (line.base * rate.value) / 100 : line.qty * rate.value;
+  const basic = basicAmount(rate, line);
   const beforeStep = (basic * specialPercent) / 100;
   const result = {
     lineKey: line.lineKey, odooUserId: line.odooUserId, rateId: rate.id, rateLabel: rateLabel(rate), specialPercent, stepPercent,

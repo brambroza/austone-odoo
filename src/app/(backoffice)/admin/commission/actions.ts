@@ -206,12 +206,12 @@ const rateSchema = z.object({
   pricelistName: z.string().trim().max(200).nullable(),
   odooProductId: z.number().int().positive().nullable(),
   productName: z.string().trim().max(200).nullable(),
-  kind: z.enum(['PERCENT', 'PER_UNIT']),
+  kind: z.enum(['PERCENT', 'PERCENT_GROSS', 'PER_UNIT']),
   value: z.number().finite().min(0, 'อัตราต้องไม่ติดลบ'),
   validFrom: z.string().refine(isIsoDate, 'วันที่เริ่มไม่ถูกต้อง'),
   validTo: z.string().refine(isIsoDate, 'วันที่สิ้นสุดไม่ถูกต้อง').nullable(),
   note: z.string().trim().max(200).nullable(),
-}).refine((r) => r.kind !== 'PERCENT' || r.value <= 100, 'อัตรา % ต้องไม่เกิน 100').refine((r) => !r.validTo || r.validTo >= r.validFrom, 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม');
+}).refine((r) => r.kind === 'PER_UNIT' || r.value <= 100, 'อัตรา % ต้องไม่เกิน 100').refine((r) => !r.validTo || r.validTo >= r.validFrom, 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม');
 
 /** Adds a rate (brand × family × price group, or one product). */
 export async function createRateAction(formData: FormData) {
