@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarX2, Trash2, Wand2 } from 'lucide-react';
+import { CalendarX2, Pencil, Trash2, Wand2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,12 +16,12 @@ import { periodDates, thaiDay, todayBangkok } from '@/lib/commission/period';
 import { listPricelists, listRates } from '@/lib/commission/repo';
 import { tryClientFor } from '@/lib/commission/service';
 import { PRICE_GROUP_LABELS, type PriceGroup } from '@/lib/commission/types';
-import { createRateAction, endOrDeleteRateAction, seedDefaultsAction } from '../actions';
+import { createRateAction, endOrDeleteRateAction, seedDefaultsAction, updateRateAction } from '../actions';
 
 const PATH = '/admin/commission/rates';
 const label = 'block text-xs font-medium';
 const input = 'mt-1 h-9 w-full rounded-lg border border-border bg-background px-2 text-sm font-normal';
-type Search = { source?: string; period?: string; pq?: string; pid?: string; pname?: string; all?: string; saved?: string; error?: string };
+type Search = { source?: string; period?: string; pq?: string; pid?: string; pname?: string; edit?: string; all?: string; saved?: string; error?: string };
 
 /**
  * Commission rates per brand × product family × price group (or per product), as % of the amount
@@ -57,7 +57,16 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
   }).filter((o, i, all) => all.findIndex((x) => x.value === o.value) === i);
   const showAll = params.all === '1';
   const visible = rates.filter((r) => showAll || !r.validTo || r.validTo >= today);
-  const pid = Number(params.pid);
+  const editing = params.edit ? rates.find((r) => r.id === params.edit) ?? null : null;
+  // Product picked from search wins; else the edited rate's own product.
+  const pid = params.pid ? Number(params.pid) : editing?.odooProductId ?? NaN;
+  const pname = params.pid ? params.pname : editing?.productName ?? params.pname;
+  const categoryValue = editing ? `${editing.brand}|${editing.family}` : '*|*';
+  if (editing && !categoryOptions.some((o) => o.value === categoryValue) && categoryValue !== '*|*') {
+    categoryOptions.push({ value: categoryValue, label: `${editing.brand === '*' ? 'ทุกยี่ห้อ' : editing.brand}-${editing.family === '*' ? 'ทุกกลุ่ม' : editing.family}` });
+  }
+  const priceValue = editing?.odooPricelistId ? `pl:${editing.odooPricelistId}|${editing.pricelistName ?? ''}` : '*';
+  const formKey = editing?.id ?? 'new';
   const hidden = source && (<><input type="hidden" name="source" value={source.id} /><input type="hidden" name="period" value={ctx.period} /></>);
 
   return (
@@ -104,6 +113,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                     <TableCell data-label="หมายเหตุ" className="text-xs whitespace-normal text-muted-foreground">{r.note}</TableCell>
                     <TableCell>
                       <span className="flex items-center justify-end gap-1">
+                        <Link href={`${PATH}?${ctxQuery(ctx, { edit: r.id, all: showAll ? '1' : undefined })}#rate-form`} aria-label="แก้ไขอัตรา" title="แก้ไขอัตรา" className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-4" /></Link>
                         {!r.validTo && (
                           <form action={endOrDeleteRateAction} className="flex items-center gap-1">
                             {hidden}<input type="hidden" name="id" value={r.id} />
@@ -124,9 +134,9 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
           </TableCard>
           <Link href={`${PATH}?${ctxQuery(ctx, { all: showAll ? undefined : '1' })}`} className="text-xs text-primary-ink underline">{showAll ? 'ซ่อนอัตราที่สิ้นสุดแล้ว' : 'แสดงอัตราที่สิ้นสุดแล้วด้วย'}</Link>
 
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold">เพิ่มอัตรา</h2>
-            <form action={PATH} className="mb-3 flex flex-wrap items-end gap-2 text-sm">
+          <section id="rate-form" className="rounded-xl border border-border bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold">{editing ? 'แก้ไขอัตรา' : 'เพิ่มอัตรา'}</h2>
+            {!editing && <form action={PATH} className="mb-3 flex flex-wrap items-end gap-2 text-sm">
               <input type="hidden" name="source" value={source.id} /><input type="hidden" name="period" value={ctx.period} />
               <label className={label}>ตั้งรายสินค้า: ค้นหาสินค้าใน Odoo<Input name="pq" defaultValue={params.pq} placeholder="รหัส หรือ ชื่อ" className="mt-1 w-64" /></label>
               <Button type="submit" size="sm" variant="outline">ค้นหา</Button>
@@ -135,18 +145,19 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                   {products.map((p) => <li key={p.id}><Link className="text-primary-ink underline" href={`${PATH}?${ctxQuery(ctx, { pid: String(p.id), pname: p.name })}`}>{p.name}</Link> <span className="text-muted-foreground">{p.category}</span></li>)}
                 </ul>
               )}
-            </form>
-            <form action={createRateAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            </form>}
+            <form key={formKey} action={editing ? updateRateAction : createRateAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {hidden}
+              {editing && <input type="hidden" name="id" value={editing.id} />}
               {Number.isInteger(pid) && pid > 0 ? (
                 <p className="rounded-lg bg-muted p-2 text-sm sm:col-span-2 lg:col-span-4">
-                  รายสินค้า: <b>{params.pname}</b> (#{pid}) <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-2 text-xs text-primary-ink underline">ยกเลิก ใช้หมวดสินค้าแทน</Link>
-                  <input type="hidden" name="odooProductId" value={pid} /><input type="hidden" name="productName" value={params.pname ?? ''} />
+                  รายสินค้า: <b>{pname}</b> (#{pid}) {!editing && <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-2 text-xs text-primary-ink underline">ยกเลิก ใช้หมวดสินค้าแทน</Link>}
+                  <input type="hidden" name="odooProductId" value={pid} /><input type="hidden" name="productName" value={pname ?? ''} />
                 </p>
               ) : (
                 categoryOptions.length > 0 ? (
                   <label className={`${label} sm:col-span-2`}>หมวดสินค้า (product category จาก Odoo)
-                    <select name="category" defaultValue="*|*" className={input}>
+                    <select name="category" defaultValue={categoryValue} className={input}>
                       <option value="*|*">ทุกหมวดสินค้า</option>
                       <optgroup label="หมวดสินค้าใน Odoo">
                         {categoryOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -160,15 +171,17 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                   </label>
                 ) : (
                   <>
-                    <label className={label}>ยี่ห้อ (ว่าง = ทุกยี่ห้อ)<input name="brand" list="brand-list" placeholder="เช่น AT" className={input} /></label>
-                    <label className={label}>กลุ่มสินค้า (ว่าง = ทุกกลุ่ม)<input name="family" list="family-list" placeholder="เช่น PCR, TBR" className={input} /></label>
+                    <label className={label}>ยี่ห้อ (ว่าง = ทุกยี่ห้อ)<input name="brand" list="brand-list" placeholder="เช่น AT" defaultValue={editing && editing.brand !== '*' ? editing.brand : ''} className={input} /></label>
+                    <label className={label}>กลุ่มสินค้า (ว่าง = ทุกกลุ่ม)<input name="family" list="family-list" placeholder="เช่น PCR, TBR" defaultValue={editing && editing.family !== '*' ? editing.family : ''} className={input} /></label>
                     <p className="text-xs text-amber-700 sm:col-span-2">อ่านหมวดสินค้าจาก Odoo ไม่ได้ จึงให้พิมพ์ยี่ห้อ / กลุ่มสินค้าเอง</p>
                   </>
                 )
               )}
               <label className={label}>Pricelist
-                <select name="priceGroup" defaultValue="*" className={input}>
+                <select name="priceGroup" defaultValue={editing && editing.priceGroup !== '*' ? editing.priceGroup : priceValue} className={input}>
                   <option value="*">ทุก pricelist</option>
+                  {editing && editing.priceGroup !== '*' && <option value={editing.priceGroup}>กลุ่มราคา: {PRICE_GROUP_LABELS[editing.priceGroup]}</option>}
+                  {editing?.odooPricelistId && !pricelists.some((p) => p.id === editing.odooPricelistId) && <option value={priceValue}>{editing.pricelistName ?? `#${editing.odooPricelistId}`}</option>}
                   {pricelists.length > 0 && (
                     <optgroup label="Pricelist จาก Odoo (เฉพาะ pricelist นี้)">
                       {pricelists.map((p) => {
@@ -180,17 +193,19 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                 </select>
               </label>
               <label className={label}>ชนิด
-                <select name="kind" defaultValue="PERCENT" className={input}>
+                <select name="kind" defaultValue={editing?.kind ?? 'PERCENT'} className={input}>
                   <option value="PERCENT">% ของยอดก่อน VAT</option>
                   <option value="PERCENT_GROSS">% ของยอดรวม VAT</option>
                   <option value="PER_UNIT">บาท ต่อหน่วยที่ขาย</option>
                 </select>
               </label>
-              <label className={label}>อัตรา<input name="value" type="number" inputMode="decimal" min="0" step="0.0001" required placeholder="0.9" className={input} /></label>
-              <label className={label}>เริ่มใช้<input name="validFrom" type="date" required defaultValue={periodStart} className={input} /></label>
-              <label className={label}>สิ้นสุด (ว่าง = ไม่กำหนด)<input name="validTo" type="date" className={input} /></label>
-              <label className={label}>หมายเหตุ<input name="note" maxLength={200} className={input} /></label>
-              <div className="sm:col-span-2 lg:col-span-4"><Button type="submit" size="sm">เพิ่มอัตรา</Button></div>
+              <label className={label}>อัตรา<input name="value" type="number" inputMode="decimal" min="0" step="0.0001" required placeholder="0.9" defaultValue={editing?.value} className={input} /></label>
+              <label className={label}>เริ่มใช้<input name="validFrom" type="date" required defaultValue={editing?.validFrom ?? periodStart} className={input} /></label>
+              <label className={label}>สิ้นสุด (ว่าง = ไม่กำหนด)<input name="validTo" type="date" defaultValue={editing?.validTo ?? undefined} className={input} /></label>
+              <label className={label}>หมายเหตุ<input name="note" maxLength={200} defaultValue={editing?.note ?? undefined} className={input} /></label>
+              <div className="sm:col-span-2 lg:col-span-4"><Button type="submit" size="sm">{editing ? 'บันทึกการแก้ไข' : 'เพิ่มอัตรา'}</Button>
+                {editing && <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-3 text-xs text-primary-ink underline">ยกเลิกการแก้ไข</Link>}
+              </div>
             </form>
             <datalist id="brand-list">{brands.map((b) => <option key={b} value={b} />)}</datalist>
             <datalist id="family-list">{families.map((f) => <option key={f} value={f} />)}</datalist>

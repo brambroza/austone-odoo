@@ -213,11 +213,8 @@ const rateSchema = z.object({
   note: z.string().trim().max(200).nullable(),
 }).refine((r) => r.kind === 'PER_UNIT' || r.value <= 100, 'อัตรา % ต้องไม่เกิน 100').refine((r) => !r.validTo || r.validTo >= r.validFrom, 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม');
 
-/** Adds a rate (brand × family × price group, or one product). */
-export async function createRateAction(formData: FormData) {
-  const actor = await requirePermission('commission.manage');
-  const path = `${BASE}/rates`;
-  const source = await sourceOf(path, formData);
+/** Reads and validates the rate form (shared by add and edit); redirects back with the first problem. */
+function parseRateForm(path: string, formData: FormData) {
   const productId = Number(field(formData, 'odooProductId'));
   // The price field is '*', a price group, or `pl:<id>|<name>` for one Odoo pricelist.
   const price = field(formData, 'priceGroup') || '*';
@@ -233,8 +230,34 @@ export async function createRateAction(formData: FormData) {
   });
   if (!parsed.success) fail(path, formData, parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง');
   const rate = parsed.data!;
-  await repo.createRate({ sourceId: source.id, ...rate, brand: rate.odooProductId ? '*' : rate.brand, family: rate.odooProductId ? '*' : rate.family }, actor.id);
+  return { ...rate, brand: rate.odooProductId ? '*' : rate.brand, family: rate.odooProductId ? '*' : rate.family };
+}
+
+/** Adds a rate (brand × family × price group, or one product). */
+export async function createRateAction(formData: FormData) {
+  const actor = await requirePermission('commission.manage');
+  const path = `${BASE}/rates`;
+  const source = await sourceOf(path, formData);
+  const rate = parseRateForm(path, formData);
+  await repo.createRate({ sourceId: source.id, ...rate }, actor.id);
   await audit(actor.id, 'commission.rate.create', 'CommissionSource', source.id, rate);
+  revalidatePath(path);
+  back(path, formData, { saved: '1' });
+}
+
+/**
+ * Edits an existing rate in place. Approved runs keep their stored results; runs not yet approved
+ * are recalculated with the new values.
+ */
+export async function updateRateAction(formData: FormData) {
+  const actor = await requirePermission('commission.manage');
+  const path = `${BASE}/rates`;
+  const source = await sourceOf(path, formData);
+  const id = field(formData, 'id');
+  if (!id) fail(path, formData, 'ไม่พบอัตราที่จะแก้ไข');
+  const rate = parseRateForm(path, formData);
+  await repo.updateRate(id, source.id, rate);
+  await audit(actor.id, 'commission.rate.update', 'CommissionRate', id, rate);
   revalidatePath(path);
   back(path, formData, { saved: '1' });
 }

@@ -253,6 +253,10 @@ export async function createRate(input: Omit<CommissionRate, 'id'>, actorId: str
 }
 
 /** Ends a rate on `validTo` (rates are never edited in place so past periods keep their numbers). */
+export async function updateRate(id: string, sourceId: string, input: Omit<CommissionRate, 'id' | 'sourceId'>): Promise<void> {
+  unwrap(await db().from('CommissionRate').update(input).eq('id', id).eq('sourceId', sourceId));
+}
+
 export async function endRate(id: string, sourceId: string, validTo: string): Promise<void> {
   unwrap(await db().from('CommissionRate').update({ validTo }).eq('id', id).eq('sourceId', sourceId));
 }
