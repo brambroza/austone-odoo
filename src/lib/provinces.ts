@@ -9,3 +9,11 @@ export const PROVINCES = [
   'สมุทรสงคราม', 'สมุทรสาคร', 'สระแก้ว', 'สระบุรี', 'สิงห์บุรี', 'สุโขทัย', 'สุพรรณบุรี', 'สุราษฎร์ธานี', 'สุรินทร์', 'หนองคาย',
   'หนองบัวลำภู', 'อ่างทอง', 'อำนาจเจริญ', 'อุดรธานี', 'อุตรดิตถ์', 'อุทัยธานี', 'อุบลราชธานี',
 ] as const;
+
+/**
+ * Short province name from an Odoo state name. Odoo databases differ: `จ.นครสวรรค์ (TH)`,
+ * `จังหวัดเชียงใหม่ (TH)`, `กรุงเทพมหานคร`. Strips the country suffix and either prefix.
+ */
+export function shortProvinceName(name: string): string {
+  return name.trim().replace(/\s*\(TH\)$/, '').replace(/^(จังหวัด|จ\.)\s*/, '').trim();
+}

@@ -1,5 +1,6 @@
 import { odooBaseUrl, odooSearchRead } from '@/lib/odoo/rpc';
 import { CUSTOMER_MATCH } from '@/lib/odoo/customer-pricing';
+import { shortProvinceName } from '@/lib/provinces';
 import { getCarrier, pickDealerCarrier, listPublishedCarriers, type DeliveryCarrier } from '@/lib/odoo/delivery-carrier';
 import { computePrice, fromOdooItem, type PriceContext, type PricelistItem } from './price-engine';
 import { normalizeSizeQuery, parseSize, sizeMatches } from './size';
@@ -264,9 +265,9 @@ export function clearPartnerCache() {
   partnerCache = null;
 }
 
-/** Full province name as Odoo stores it (`จังหวัดเชียงใหม่`) → short (`เชียงใหม่`). */
+/** Full province name as Odoo stores it (`จ.เชียงใหม่ (TH)`, `จังหวัดเชียงใหม่`) → short (`เชียงใหม่`). */
 export function shortProvince(name: string): string {
-  return name.replace(/^จังหวัด/, '').replace(/\s*\(TH\)$/, '');
+  return shortProvinceName(name);
 }
 
 /**

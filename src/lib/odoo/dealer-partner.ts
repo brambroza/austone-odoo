@@ -14,9 +14,12 @@ const BANGKOK = 'กรุงเทพมหานคร';
 
 type IdName = { id: number; name: string };
 
-/** Odoo stores provinces as `จังหวัดเชียงใหม่`, Bangkok without the prefix. */
-export function odooStateName(province: string): string {
-  return province === BANGKOK ? province : `จังหวัด${province}`;
+/**
+ * Names Odoo may store a province under: `จ.เชียงใหม่` or `จังหวัดเชียงใหม่` depending on the
+ * database, Bangkok without a prefix.
+ */
+export function odooStateNames(province: string): string[] {
+  return province === BANGKOK ? [province] : [`จ.${province}`, `จังหวัด${province}`];
 }
 
 /**
@@ -63,7 +66,7 @@ async function findExistingPartners(dealer: Dealer): Promise<IdName[]> {
 async function findStateAndCountry(province: string): Promise<{ stateId: number | null; countryId: number | null }> {
   const [countries, states] = await Promise.all([
     odooSearchRead<IdName>('res.country', [['code', '=', 'TH']], ['id', 'name'], { limit: 1 }),
-    odooSearchRead<IdName>('res.country.state', [['country_id.code', '=', 'TH'], ['name', '=', odooStateName(province)]], ['id', 'name'], { limit: 1 }),
+    odooSearchRead<IdName>('res.country.state', [['country_id.code', '=', 'TH'], ['name', 'in', odooStateNames(province)]], ['id', 'name'], { limit: 1 }),
   ]);
   return { countryId: countries[0]?.id ?? null, stateId: states[0]?.id ?? null };
 }

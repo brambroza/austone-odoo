@@ -7,6 +7,7 @@
  */
 import { z } from 'zod';
 import { repTagName } from '@/lib/commission/ledger';
+import { shortProvinceName } from '@/lib/provinces';
 import { odooSearchRead, odooWrite } from './rpc';
 
 export type OdooCustomer = {
@@ -71,7 +72,7 @@ export function toOdooCustomer(raw: RawCustomer, repTags: ReadonlyMap<number, st
     vat: raw.vat || null,
     phone: raw.phone || null,
     email: raw.email || null,
-    province: raw.state_id ? raw.state_id[1].replace(/\s*\(TH\)$/, '').replace(/^จังหวัด/, '') : null,
+    province: raw.state_id ? shortProvinceName(raw.state_id[1]) : null,
     pricelist: raw.property_product_pricelist ? { id: raw.property_product_pricelist[0], name: raw.property_product_pricelist[1] } : null,
     creditLimit: raw.use_partner_credit_limit && raw.credit_limit > 0 ? raw.credit_limit : null,
     receivable: Math.max(0, Number(raw.credit) || 0),

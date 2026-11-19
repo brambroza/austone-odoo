@@ -7,7 +7,7 @@ vi.mock('@/lib/odoo/rpc', () => rpc);
 vi.mock('@/lib/dealers/repo', () => repo);
 vi.mock('@/lib/shop/catalog', () => ({ clearPartnerCache: vi.fn() }));
 
-const { ensureDealerPartner, linkDealersToOdoo, odooStateName, partnerValues } = await import('@/lib/odoo/dealer-partner');
+const { ensureDealerPartner, linkDealersToOdoo, odooStateNames, partnerValues } = await import('@/lib/odoo/dealer-partner');
 
 function dealer(overrides: Partial<Dealer> = {}): Dealer {
   return {
@@ -19,8 +19,8 @@ function dealer(overrides: Partial<Dealer> = {}): Dealer {
 
 describe('partner values', () => {
   it('maps Bangkok without the จังหวัด prefix', () => {
-    expect(odooStateName('กรุงเทพมหานคร')).toBe('กรุงเทพมหานคร');
-    expect(odooStateName('สมุทรปราการ')).toBe('จังหวัดสมุทรปราการ');
+    expect(odooStateNames('กรุงเทพมหานคร')).toEqual(['กรุงเทพมหานคร']);
+    expect(odooStateNames('สมุทรปราการ')).toEqual(['จ.สมุทรปราการ', 'จังหวัดสมุทรปราการ']);
   });
 
   it('builds a company customer with address, state, country and pricelist', () => {
