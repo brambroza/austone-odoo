@@ -17,6 +17,7 @@ import { listPricelists, listRates } from '@/lib/commission/repo';
 import { tryClientFor } from '@/lib/commission/service';
 import { PRICE_GROUP_LABELS, type PriceGroup } from '@/lib/commission/types';
 import { createRateAction, endOrDeleteRateAction, seedDefaultsAction, updateRateAction } from '../actions';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const PATH = '/admin/commission/rates';
 const label = 'block text-xs font-medium';
@@ -81,7 +82,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
               {hidden}
               <span className="w-full font-medium">เริ่มจากเงื่อนไขที่ลูกค้าแจ้ง: PCR ปลีก 0.9% ส่ง 0.4% · TBR ปลีก 0.6% ส่ง 0.3% · เกินดิว 0-10 วัน 110%, 11-15 วัน 100%, 16-20 วัน 90%</span>
               <label className={label}>ยี่ห้อ<Input name="brand" defaultValue="AT" className="mt-1 w-36" list="brand-list" /></label>
-              <label className={label}>เริ่มใช้<Input name="validFrom" type="date" defaultValue={periodStart} className="mt-1 w-40" /></label>
+              <label className={label}>เริ่มใช้<DatePicker name="validFrom" defaultValue={periodStart} className="mt-1 w-40" /></label>
               <Button type="submit" size="sm"><Wand2 /> สร้างค่าเริ่มต้น</Button>
             </form>
           )}
@@ -117,7 +118,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                         {!r.validTo && (
                           <form action={endOrDeleteRateAction} className="flex items-center gap-1">
                             {hidden}<input type="hidden" name="id" value={r.id} />
-                            <input name="validTo" type="date" defaultValue={today} aria-label="สิ้นสุดวันที่" className="h-8 w-36 rounded-lg border border-border bg-background px-1 text-xs" />
+                            <DatePicker name="validTo" defaultValue={today} aria-label="สิ้นสุดวันที่" size="sm" className="w-36" />
                             <IconSubmit label="สิ้นสุดอัตรานี้ในวันที่เลือก"><CalendarX2 /></IconSubmit>
                           </form>
                         )}
@@ -200,8 +201,8 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                 </select>
               </label>
               <label className={label}>อัตรา<input name="value" type="number" inputMode="decimal" min="0" step="0.0001" required placeholder="0.9" defaultValue={editing?.value} className={input} /></label>
-              <label className={label}>เริ่มใช้<input name="validFrom" type="date" required defaultValue={editing?.validFrom ?? periodStart} className={input} /></label>
-              <label className={label}>สิ้นสุด (ว่าง = ไม่กำหนด)<input name="validTo" type="date" defaultValue={editing?.validTo ?? undefined} className={input} /></label>
+              <label className={label}>เริ่มใช้<DatePicker name="validFrom" required defaultValue={editing?.validFrom ?? periodStart} className="mt-1" /></label>
+              <label className={label}>สิ้นสุด (ว่าง = ไม่กำหนด)<DatePicker name="validTo" defaultValue={editing?.validTo ?? undefined} className="mt-1" /></label>
               <label className={label}>หมายเหตุ<input name="note" maxLength={200} defaultValue={editing?.note ?? undefined} className={input} /></label>
               <div className="sm:col-span-2 lg:col-span-4"><Button type="submit" size="sm">{editing ? 'บันทึกการแก้ไข' : 'เพิ่มอัตรา'}</Button>
                 {editing && <Link href={`${PATH}?${ctxQuery(ctx)}`} className="ml-3 text-xs text-primary-ink underline">ยกเลิกการแก้ไข</Link>}

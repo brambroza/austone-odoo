@@ -9,6 +9,7 @@ import { listHref, paginate } from '@/lib/admin/list';
 import { auditFacets, listAuditLogs } from '@/lib/auth/audit-log';
 import { requirePermission } from '@/lib/auth/session';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const PATH = '/admin/audit';
 const fmt = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'medium' });
@@ -46,9 +47,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         <form action={PATH} className="ml-auto flex items-center gap-1 text-xs">
           {params.action && <input type="hidden" name="action" value={params.action} />}
           {params.q && <input type="hidden" name="q" value={params.q} />}
-          <Input name="from" type="date" defaultValue={params.from} aria-label="จากวันที่" className="h-8 w-36" />
+          <DatePicker name="from" defaultValue={params.from} aria-label="จากวันที่" size="sm" className="w-36" />
           <span>–</span>
-          <Input name="to" type="date" defaultValue={params.to} aria-label="ถึงวันที่" className="h-8 w-36" />
+          <DatePicker name="to" defaultValue={params.to} aria-label="ถึงวันที่" size="sm" className="w-36" />
           <button type="submit" className="h-8 rounded-lg border border-border bg-card px-2 hover:bg-muted">กรอง</button>
         </form>
       </div>
