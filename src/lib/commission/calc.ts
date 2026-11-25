@@ -25,13 +25,16 @@ export function isValidOn(rule: { validFrom: string; validTo: string | null }, d
 const matches = (rule: string, value: string) => rule === '*' || rule.trim().toUpperCase() === value.trim().toUpperCase();
 
 /**
- * Most specific rate for a line on its cash date: a per-product rate first, then the rate matching
+ * Most specific rate for a line on its invoice date: a per-product rate first, then the rate matching
  * the most of brand / family / price group ('*' matches anything). Ties go to the newest `validFrom`.
+ * A line without an invoice date gets no rate (credit-note lines carry the note's own date).
  */
-export function pickRate(rates: readonly CommissionRate[], line: Pick<LedgerLine, 'productId' | 'brand' | 'family' | 'cashDate'> & { pricelistId?: number | null }, group: PriceGroup | null): CommissionRate | null {
+export function pickRate(rates: readonly CommissionRate[], line: Pick<LedgerLine, 'productId' | 'brand' | 'family' | 'invoiceDate'> & { pricelistId?: number | null }, group: PriceGroup | null): CommissionRate | null {
+  const date = line.invoiceDate;
+  if (!date) return null;
   let best: { rate: CommissionRate; score: number } | null = null;
   for (const rate of rates) {
-    if (!isValidOn(rate, line.cashDate)) continue;
+    if (!isValidOn(rate, date)) continue;
     const pricelistId = rate.odooPricelistId ?? null;
     if (pricelistId !== null && pricelistId !== (line.pricelistId ?? null)) continue;
     if (rate.priceGroup !== '*' && rate.priceGroup !== group) continue;
@@ -156,10 +159,12 @@ export function lineCommission(line: LedgerLine, input: Pick<CalcInput, 'rates' 
   const stepRange = step ? { minDays: step.minDays, maxDays: step.maxDays } : null;
   if (!rate) {
     const where = [line.brand || 'ไม่มียี่ห้อ', line.family || 'ไม่มีกลุ่ม', `${line.pricelistName ?? 'ไม่มี pricelist'} (${group ? PRICE_GROUP_LABELS[group] : 'pricelist ยังไม่จัดกลุ่ม'})`].join(' / ');
-    // A rate that would match but starts after the cash date is the usual set-up slip: say so.
-    const undated = pickRate(input.rates.filter((r) => r.validFrom > line.cashDate).map((r) => ({ ...r, validFrom: '0000-01-01', validTo: null })), line, group);
+    if (!line.invoiceDate) return { ...empty, specialPercent, stepPercent, issue: `ไม่มีวันที่ใบแจ้งหนี้ จึงเลือกอัตราค่าคอมไม่ได้ (${where})` };
+    // A rate that would match but starts after the invoice date is the usual set-up slip: say so.
+    const invoiceDate = line.invoiceDate;
+    const undated = pickRate(input.rates.filter((r) => r.validFrom > invoiceDate).map((r) => ({ ...r, validFrom: '0000-01-01', validTo: null })), line, group);
     const later = undated && input.rates.find((r) => r.id === undated.id);
-    const hint = later ? ` (มีอัตราแต่เริ่มใช้ ${later.validFrom} หลังวันเงินเข้า ${line.cashDate})` : '';
+    const hint = later ? ` (มีอัตราแต่เริ่มใช้ ${later.validFrom} หลังวันที่ใบแจ้งหนี้ ${invoiceDate})` : '';
     return { ...empty, specialPercent, stepPercent, issue: `ไม่มีอัตราค่าคอมสำหรับ ${where}${hint}` };
   }
   const basic = basicAmount(rate, line);

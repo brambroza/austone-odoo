@@ -60,7 +60,7 @@ export function ThaiAddressFields({ defaultValue, legacyText, classes, invalidFi
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block sm:col-span-2">
         <span className={labelClass}>บ้านเลขที่ / หมู่ / ซอย / ถนน</span>
-        <TextInput name="line" defaultValue={defaultValue?.line ?? ''} required minLength={3} maxLength={200} placeholder="เช่น 99/1 ม.3 ถ.มิตรภาพ" className={inputClass} autoComplete="street-address" aria-invalid={invalid('line')} />
+        <TextInput name="line" defaultValue={defaultValue?.line ?? ''} required minLength={1} maxLength={200} placeholder="เช่น 99/1 ม.3 ถ.มิตรภาพ" className={inputClass} autoComplete="street-address" aria-invalid={invalid('line')} />
         {!defaultValue && legacyText && <span className="mt-1 block text-[11px] text-muted-foreground">ที่อยู่เดิม: {legacyText}</span>}
       </label>
       <label className="block">

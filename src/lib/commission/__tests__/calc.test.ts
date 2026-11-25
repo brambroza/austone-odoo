@@ -32,6 +32,20 @@ const run = (lines: LedgerLine[], over: Partial<CalcInput> = {}) => calculateRun
 });
 
 describe('pickRate', () => {
+  it('picks the rate in force on the invoice date, not the cash date', () => {
+    const rates = [rate({ id: 'old', value: 0.9, validTo: '2026-09-30' }), rate({ id: 'new', value: 1.2, validFrom: '2026-10-01' })];
+    // Invoiced in September, paid in October: September rate.
+    expect(pickRate(rates, line({ invoiceDate: '2026-09-15', cashDate: '2026-10-20' }), 'RETAIL')?.id).toBe('old');
+    expect(pickRate(rates, line({ invoiceDate: '2026-10-01', cashDate: '2026-10-20' }), 'RETAIL')?.id).toBe('new');
+  });
+
+  it('gives no rate to a line without an invoice date', () => {
+    expect(pickRate(RATES, line({ invoiceDate: null }), 'RETAIL')).toBeNull();
+    const result = lineCommission(line({ invoiceDate: null }), { rates: RATES, steps: STEPS }, PRICELISTS[0]);
+    expect(result.commission).toBe(0);
+    expect(result.issue).toContain('ไม่มีวันที่ใบแจ้งหนี้');
+  });
+
   it('matches brand, family and price group case-insensitively', () => {
     expect(pickRate(RATES, line({ family: 'tbr' }), 'WHOLESALE')?.id).toBe('tbr-w');
     expect(pickRate(RATES, line({ brand: 'OTHER' }), 'RETAIL')).toBeNull();
@@ -42,8 +56,8 @@ describe('pickRate', () => {
     const rates = [...RATES, rate({ id: 'any', brand: '*', family: '*', priceGroup: '*', value: 0.1 }), rate({ id: 'prod', odooProductId: 501, brand: '*', family: '*', priceGroup: '*', kind: 'PER_UNIT', value: 15 }),
       rate({ id: 'pcr-r-new', value: 1.0, validFrom: '2026-10-01' })];
     expect(pickRate(rates, line({}), 'RETAIL')?.id).toBe('prod');
-    expect(pickRate(rates, line({ productId: 777 }), 'RETAIL')?.id).toBe('pcr-r-new');
-    expect(pickRate(rates, line({ productId: 777, cashDate: '2026-09-30' }), 'RETAIL')?.id).toBe('pcr-r');
+    expect(pickRate(rates, line({ productId: 777, invoiceDate: '2026-10-01' }), 'RETAIL')?.id).toBe('pcr-r-new');
+    expect(pickRate(rates, line({ productId: 777, invoiceDate: '2026-09-30' }), 'RETAIL')?.id).toBe('pcr-r');
     expect(pickRate(rates, line({ productId: 777, brand: 'X' }), 'OTHER')?.id).toBe('any');
     expect(pickRate([rate({ odooProductId: 501, priceGroup: 'WHOLESALE' })], line({}), 'RETAIL')).toBeNull();
   });
@@ -106,10 +120,12 @@ describe('lineCommission', () => {
     expect(rateLabel({ kind: 'PERCENT_GROSS', value: 1 })).toBe('1% (รวม VAT)');
   });
 
-  it('explains rules that start after the cash date', () => {
-    const late = lineCommission(line({ cashDate: '2026-10-08' }), { rates: [rate({ validFrom: '2026-11-04' })], steps: STEPS }, PRICELISTS[0]);
-    expect(late.commission).toBe(0);
-    expect(late.issue).toContain('เริ่มใช้ 2026-11-04 หลังวันเงินเข้า 2026-10-08');
+  it('explains rules that start after the invoice date', () => {
+    const late = lineCommission(line({ invoiceDate: '2026-10-08' }), { rates: [rate({ validFrom: '2026-10-05' })], steps: STEPS }, PRICELISTS[0]);
+    expect(late.rateId).toBe('r');
+    const early = lineCommission(line({ invoiceDate: '2026-10-01', cashDate: '2026-11-10' }), { rates: [rate({ validFrom: '2026-11-04' })], steps: STEPS }, PRICELISTS[0]);
+    expect(early.commission).toBe(0);
+    expect(early.issue).toContain('เริ่มใช้ 2026-11-04 หลังวันที่ใบแจ้งหนี้ 2026-10-01');
     // No overdue step in force on the cash date: paid at 100%, no warning.
     const noStep = lineCommission(line({ cashDate: '2026-10-08' }), { rates: RATES, steps: [step(0, 10, 110, '2026-11-04')] }, PRICELISTS[0]);
     expect(noStep).toMatchObject({ stepPercent: 100, noSteps: true, stepRange: null });

@@ -15,7 +15,7 @@ export function normalizeThaiPhone(raw: string): string {
  * The postal code defaults from the subdistrict but may be edited (some areas share several codes).
  */
 export const thaiAddressSchema = z.object({
-  line: z.string().trim().min(3, 'กรอกบ้านเลขที่ / ถนน').max(200, 'บ้านเลขที่ / ถนน ยาวเกิน 200 ตัวอักษร'),
+  line: z.string().trim().min(1, 'กรอกบ้านเลขที่ / ถนน').max(200, 'บ้านเลขที่ / ถนน ยาวเกิน 200 ตัวอักษร'),
   province: z.string().trim().min(1, 'เลือกจังหวัด'),
   district: z.string().trim().min(1, 'เลือกอำเภอ/เขต'),
   subdistrict: z.string().trim().min(1, 'เลือกตำบล/แขวง'),

@@ -24,7 +24,8 @@ describe('thaiAddressSchema', () => {
   it('rejects mismatched or missing levels', () => {
     expect(thaiAddressSchema.safeParse({ ...bkk, district: 'บางรัก' }).success).toBe(false);
     expect(thaiAddressSchema.safeParse({ ...bkk, subdistrict: '' }).success).toBe(false);
-    expect(thaiAddressSchema.safeParse({ ...bkk, line: 'ab' }).success).toBe(false);
+    expect(thaiAddressSchema.safeParse({ ...bkk, line: '   ' }).success).toBe(false);
+    expect(thaiAddressSchema.safeParse({ ...bkk, line: '9' }).success).toBe(true);
   });
 });
 
