@@ -200,13 +200,70 @@ describe('fetchInvoiceSales', () => {
 describe('fetchCredits', () => {
   it('lists credit notes of the period with their rep and the customer refunds', async () => {
     const data = { ...base, 'account.move': base['account.move'].map((m) => ({ ...m, amount_untaxed: -Math.abs(Number(m.amount_total)) / 1.07, reversed_entry_id: m.move_type === 'out_refund' ? [100, 'INV/0001'] : false })) };
-    const { credits, refunds } = await fetchCredits(fakeClient(data), { start: '2026-09-21', end: '2026-10-20' });
+    const { credits, refunds } = await fetchCredits(fakeClient(data), { start: '2026-09-21', end: '2026-10-20' }, '2026-10');
     expect(credits.map((c) => c.name)).toEqual(['RINV/0001']);
     // No salesperson on the credit note: falls back to the customer's rep, as for invoices.
     expect(credits[0]).toMatchObject({ originName: 'INV/0001', odooUserId: 9, repName: 'สมหญิง', base: 5_000 });
     expect(credits[0].base).toBeGreaterThan(0);
     expect(refunds).toEqual({ count: 1, amount: 300 });
-    expect(await fetchCredits(fakeClient({}), { start: '2026-09-21', end: '2026-10-20' })).toEqual({ credits: [], refunds: { count: 0, amount: 0 } });
+    expect(await fetchCredits(fakeClient({}), { start: '2026-09-21', end: '2026-10-20' }, '2026-10')).toEqual({ credits: [], refunds: { count: 0, amount: 0 }, lines: [] });
+  });
+
+  const range = { start: '2026-09-21', end: '2026-10-20' };
+  /** RINV/0001 (5,350 incl. VAT) with its receivable set against INV/0002 for `amount` on `on`. */
+  const applied = (amount: number, on: string) => ({
+    ...base,
+    'account.move.line': [...base['account.move.line'], { id: 960, move_id: [102, 'RINV1'], account_type: 'asset_receivable', matched_debit_ids: [80] }],
+    'account.partial.reconcile': [...base['account.partial.reconcile'], { id: 80, debit_move_id: [901, 'x'], amount, max_date: on }],
+  });
+
+  it('deducts a credit note left as credit, split to its product lines with negative amounts', async () => {
+    const { credits, lines } = await fetchCredits(fakeClient(base), range, '2026-10');
+    expect(credits[0]).toMatchObject({ name: 'RINV/0001', deductedBase: 5_000, deductedGross: 5_350 });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ receiptName: 'RINV/0001', cashDate: '2026-10-02', invoiceName: 'RINV/0001', productId: 501, family: 'PCR', odooUserId: 9, base: -5_000, gross: -5_350, qty: -1 });
+  });
+
+  it('does not deduct the part set against an invoice within the period, only what is left', async () => {
+    const full = await fetchCredits(fakeClient(applied(5_350, '2026-10-10')), range, '2026-10');
+    expect(full.credits[0]).toMatchObject({ deductedBase: 0, deductedGross: 0 });
+    expect(full.lines).toEqual([]);
+    const part = await fetchCredits(fakeClient(applied(2_675, '2026-10-10')), range, '2026-10');
+    expect(part.credits[0]).toMatchObject({ deductedBase: 2_500, deductedGross: 2_675 });
+    expect(part.lines.reduce((t, l) => t + l.base, 0)).toBe(-2_500);
+    // Set against the invoice only after the period: deducted now, paid like cash later.
+    const later = await fetchCredits(fakeClient(applied(5_350, '2026-10-25')), range, '2026-10');
+    expect(later.credits[0]).toMatchObject({ deductedBase: 5_000 });
+  });
+});
+
+describe('fetchCollections with deducted credit notes', () => {
+  // INV/0001's 10 Sep half was paid by RINV/0001 (dated 1 Sep, its period ending 5 Sep) instead of cash.
+  const data = {
+    ...base,
+    'account.move': base['account.move'].map((m) => (m.id === 102 ? { ...m, invoice_date: '2026-09-01' } : m)),
+    'account.move.line': [...base['account.move.line'].filter((l) => l.id !== 950), { id: 950, move_id: [102, 'RINV/0001'], journal_id: [2, 'Sales'] }],
+    'account.journal': [{ id: 1, type: 'bank' }, { id: 2, type: 'sale' }],
+  };
+  const range = { start: '2026-09-21', end: '2026-10-20' };
+
+  it('pays the invoice with credit the note\'s own period already deducted', async () => {
+    const rule = { deducted: () => true, periodEndOf: () => '2026-09-05' };
+    const result = await fetchCollections(fakeClient(data), '2026-10', range, rule);
+    const credit = result.lines.filter((l) => l.receiptName === 'RINV/0001');
+    expect(credit.reduce((t, l) => t + l.base, 0)).toBe(50_000);
+    expect(credit[0]).toMatchObject({ invoiceName: 'INV/0001', cashDate: '2026-10-08' });
+  });
+
+  it('does not count credit that was not deducted (no rule, not deducted, or set against the invoice in its own period)', async () => {
+    const none = await fetchCollections(fakeClient(data), '2026-10', range);
+    const notDeducted = await fetchCollections(fakeClient(data), '2026-10', range, { deducted: () => false, periodEndOf: () => '2026-09-05' });
+    const samePeriod = await fetchCollections(fakeClient(data), '2026-10', range, { deducted: () => true, periodEndOf: () => '2026-09-20' });
+    for (const r of [none, notDeducted, samePeriod]) {
+      expect(r.lines.some((l) => l.receiptName === 'RINV/0001')).toBe(false);
+      // The invoice is still settled in full (cash + credit note), so its cash counts.
+      expect(r.lines.filter((l) => l.invoiceName === 'INV/0001').reduce((t, l) => t + l.base, 0)).toBe(50_000);
+    }
   });
 });
 

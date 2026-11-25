@@ -9,8 +9,8 @@ import { bonusSettings, planNewCustomers, type NewCustomerRow } from './bonus';
 import { targetSettings } from './target-mode';
 import { blockingIssues, calculateRun } from './calc';
 import { isTagRep, retroDiff } from './ledger';
-import { fetchCollections, fetchCredits, fetchFirstInvoices, fetchOverdueInvoices, fetchPaidInvoiceIds, fetchInvoiceSales, fetchRepDirectory, fetchSaleOrders } from './odoo';
-import { calendarOf, periodDates, shiftPeriod, type PeriodCalendar } from './period';
+import { fetchCollections, fetchCredits, type CreditNoteRule, fetchFirstInvoices, fetchOverdueInvoices, fetchPaidInvoiceIds, fetchInvoiceSales, fetchRepDirectory, fetchSaleOrders } from './odoo';
+import { calendarOf, periodContaining, periodDates, shiftPeriod, type PeriodCalendar } from './period';
 import * as repo from './repo';
 import { planDebt, statementSettings } from './statement';
 import { isSalesBase, type CommissionRun, type CommissionSource, type DebtHold, type LedgerLine, type RunSnapshot } from './types';
@@ -53,6 +53,21 @@ export async function periodCalendar(source: CommissionSource): Promise<PeriodCa
 async function rangeOf(source: CommissionSource, period: string): Promise<{ start: string; end: string }> {
   const { start, end } = periodDates(await periodCalendar(source), period);
   return { start, end };
+}
+
+/**
+ * Which credit notes are deducted in their own period: those a locked run deducted, and those
+ * dated in a period still open (after the last locked run; with none locked, from the first run).
+ * Their credit later set against an invoice pays it like cash (see `CreditNoteRule`).
+ */
+export async function creditNoteRule(source: CommissionSource): Promise<CreditNoteRule> {
+  const [cal, history] = await Promise.all([periodCalendar(source), repo.creditNoteHistory(source.id)]);
+  const openPeriod = history.lastLocked ? shiftPeriod(history.lastLocked, 1) : history.firstPeriod;
+  const openFrom = openPeriod ? periodDates(cal, openPeriod).start : null;
+  return {
+    deducted: (note) => history.deducted.has(note.id) || (openFrom !== null && note.date >= openFrom),
+    periodEndOf: (day) => periodDates(cal, periodContaining(cal, day)).end,
+  };
 }
 
 export type SyncResult =
@@ -122,13 +137,14 @@ export async function syncPeriod(source: CommissionSource, period: string): Prom
   const run = await repo.ensureRun(source.id, period);
   if (LOCKED.includes(run.status)) return { ok: false, reason: 'รอบนี้อนุมัติแล้ว ดึงข้อมูลใหม่ไม่ได้ (การเปลี่ยนแปลงใน Odoo จะถูกปรับปรุงในรอบถัดไป)' };
   const client = clientFor(source);
-  const fetched = await fetchCollections(client, period, await rangeOf(source, period));
+  const rule = await creditNoteRule(source);
+  const fetched = await fetchCollections(client, period, await rangeOf(source, period), rule);
 
   const previous = shiftPeriod(period, -1);
   const previousRun = await repo.getRun(source.id, previous);
   let retro: ReturnType<typeof retroDiff> = [];
   if (previousRun && LOCKED.includes(previousRun.status)) {
-    const fresh = await fetchCollections(client, previous, await rangeOf(source, previous));
+    const fresh = await fetchCollections(client, previous, await rangeOf(source, previous), rule);
     const booked = await repo.listBookedFor(source.id, previous, period);
     retro = retroDiff(booked, fresh.lines, previous);
   }
@@ -231,15 +247,16 @@ export async function calculatePeriod(source: CommissionSource, period: string):
   if (!run.syncedAt) return { ok: false, reason: 'ดึงข้อมูลจาก Odoo ก่อนคำนวณ' };
   const [ledger, snapshot, reps, carryIn] = await Promise.all([repo.listLedger(source.id, period), loadSnapshot(source, run), repo.listReps(source.id), carryInFor(source.id, period)]);
   const inactive = new Set(reps.filter((r) => !r.active).map((r) => r.odooUserId));
-  // Credit notes are for display only; if Odoo cannot be read the run still calculates, with a note.
+  // Credit notes are read live: their uncredited part is deducted before commission. If Odoo cannot be
+  // read the run still calculates, without deducting, with a note (calculate again to deduct).
   let creditError: string | null = null;
-  const credits = await fetchCredits(clientFor(source), await rangeOf(source, period)).catch((error: unknown) => {
+  const credits = await fetchCredits(clientFor(source), await rangeOf(source, period), period).catch((error: unknown) => {
     creditError = error instanceof Error ? error.message : String(error);
     return null;
   });
-  if (credits) Object.assign(snapshot, credits);
+  if (credits) Object.assign(snapshot, { credits: credits.credits, refunds: credits.refunds, creditLines: credits.lines });
   const results = calculateRun({ lines: ledger, ...snapshot, reps, inactive, carryIn, period });
-  if (creditError) results.issues.push({ message: `ดึงใบลดหนี้ (CN) จาก Odoo ไม่ได้ จึงไม่แสดงยอด CN: ${creditError}` });
+  if (creditError) results.issues.push({ message: `ดึงใบลดหนี้ (CN) จาก Odoo ไม่ได้ จึงยังไม่ได้หักยอด CN (กดคำนวณใหม่อีกครั้ง): ${creditError}` });
   const moved = await repo.updateRun(run.id, ['DRAFT'], { calculatedAt: new Date(), results, snapshot, totalPayable: results.totalPayable });
   if (!moved) return { ok: false, reason: 'สถานะรอบเปลี่ยนระหว่างคำนวณ ลองใหม่' };
   return { ok: true, run: (await repo.getRun(source.id, period))! };
@@ -299,8 +316,10 @@ export async function repEstimate(source: CommissionSource, period: string, odoo
     isSalesBase(bonusSettings(source).bonusBase) ? repo.listSaleOrders(source.id, period) : Promise.resolve([]),
   ]);
   const lines = ledger.filter((l) => l.odooUserId === odooUserId);
+  // Credit notes as read by the last calculation (none before the period is calculated).
+  const creditLines = (run?.snapshot?.creditLines ?? []).filter((l) => l.odooUserId === odooUserId);
   const results = calculateRun({
-    lines, rates, steps, pricelists, targets, adjustments: [], reps: [], carryIn: new Map([...carryIn].filter(([id]) => id === odooUserId)), period,
+    lines, creditLines, rates, steps, pricelists, targets, adjustments: [], reps: [], carryIn: new Map([...carryIn].filter(([id]) => id === odooUserId)), period,
     statement: statementSettings(source), holds: holds.filter((h) => h.odooUserId === odooUserId),
     bonus: bonusSettings(source), target: targetSettings(source), newCustomers: newCustomers.filter((c) => c.odooUserId === odooUserId), salaries,
     saleOrders: saleOrders.filter((o) => o.odooUserId === odooUserId),

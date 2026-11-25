@@ -165,6 +165,18 @@ describe('planFullPayment', () => {
     // Invoice 2: the 400 cash of 1 Oct joins this period; the 100 credit note is not cash. Invoice 3 was settled before: nothing added.
     expect(out.earlier.map((e) => e.partialId)).toEqual([20]);
   });
+
+  it('counts credit already deducted in an earlier period like cash, wherever it falls', () => {
+    const credit = (partialId: number, invoiceId: number, amount: number, date: string) => ({ ...s(partialId, invoiceId, amount, date, false), credit: true });
+    const out = planFullPayment({
+      range, invoices,
+      settlements: [s(10, 1, 38_000, '2026-10-30'), credit(11, 1, 500, '2026-11-01'), s(20, 2, 600, '2026-11-02'), credit(23, 2, 400, '2026-10-05'), credit(40, 3, 500, '2026-12-01')],
+      currentPartialIds: new Set([10, 20]),
+    });
+    // Invoice 1: cash 38,000 + deducted credit 500 settle it in this period; invoice 2: credit applied before the period; invoice 3: credit after the end does not count.
+    expect([...out.deferred]).toEqual([3]);
+    expect(out.earlier.map((e) => e.partialId).sort()).toEqual([11, 23]);
+  });
 });
 
 describe('withFinalCashDate', () => {

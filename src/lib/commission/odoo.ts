@@ -149,8 +149,15 @@ async function readInvoiceContext(client: OdooReadClient, invoiceIds: number[]) 
 
 export type CollectionFetch = { lines: LedgerLine[]; receipts: number; refunds: { count: number; amount: number }; deferred?: DeferredInvoice[] };
 
+/**
+ * Which credit notes are deducted in their own period (`fetchCredits`), and that period's last day.
+ * Credit of such a note set against an invoice after that day was deducted already, so it pays the
+ * invoice like cash. Without a rule, credit notes never pay an invoice (as before CNs were deducted).
+ */
+export type CreditNoteRule = { deducted: (note: { id: number; date: string }) => boolean; periodEndOf: (date: string) => string };
+
 /** Cash received between `start` and `end` (inclusive), split to invoice lines for `period`. */
-export async function fetchCollections(client: OdooReadClient, period: string, range: { start: string; end: string }): Promise<CollectionFetch> {
+export async function fetchCollections(client: OdooReadClient, period: string, range: { start: string; end: string }, creditRule?: CreditNoteRule): Promise<CollectionFetch> {
   const payments = await searchAll<PaymentRow>(client, 'account.payment', [
     ['payment_type', '=', 'inbound'], ['partner_type', '=', 'customer'], ['state', 'in', ['paid', 'reconciled']], ['is_matched', '=', true],
     ['date', '>=', addDays(range.start, -CLEARING_LOOKBACK_DAYS)], ['date', '<=', range.end],
@@ -215,8 +222,10 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
   const invoices = new Map([...context.invoices].filter(([, i]) => i.moveType === 'out_invoice'));
 
   // Count an invoice only in the period it becomes fully paid (decided with the client 2026-11-10).
-  const full = await fullPaymentOf(client, range, invoices, partials, debitLineMove);
-  const receiptsAll = [...receipts, ...full.earlier.map((e) => ({ key: `E${e.partialId}`, name: e.name, cashDate: range.start, partnerName: invoices.get(e.invoiceId)?.partnerName ?? '' }))];
+  const full = await fullPaymentOf(client, range, invoices, partials, debitLineMove, creditRule);
+  const receiptsAll = [...receipts, ...full.earlier.map((e) => ({
+    key: `E${e.partialId}`, name: e.name, cashDate: e.credit && e.date && e.date >= range.start ? e.date : range.start, partnerName: invoices.get(e.invoiceId)?.partnerName ?? '',
+  }))];
   const partialsAll = [
     ...partials.filter((p) => !full.deferred.has(debitLineMove.get(p.debitLineId) ?? -1)),
     ...full.earlier.map((e) => ({ id: e.partialId, receiptKey: `E${e.partialId}`, debitLineId: full.receivableLine.get(e.partialId)!, amount: e.amount })),
@@ -237,7 +246,7 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
  * journals, or credit notes and write-offs), then which to defer (not fully settled by the period
  * end) and which earlier cash to add (invoices completed now). See `planFullPayment`.
  */
-async function fullPaymentOf(client: OdooReadClient, range: { start: string; end: string }, invoices: ReadonlyMap<number, RawInvoice>, partials: readonly RawPartial[], debitLineMove: ReadonlyMap<number, number>) {
+async function fullPaymentOf(client: OdooReadClient, range: { start: string; end: string }, invoices: ReadonlyMap<number, RawInvoice>, partials: readonly RawPartial[], debitLineMove: ReadonlyMap<number, number>, creditRule?: CreditNoteRule) {
   const receivables = invoices.size ? await searchIn<{ id: number; move_id: M2O; matched_credit_ids: number[] }>(client, 'account.move.line', 'move_id', [...invoices.keys()],
     [['account_type', '=', 'asset_receivable']], ['id', 'move_id', 'matched_credit_ids']) : [];
   const receivableMove = new Map(receivables.flatMap((l) => (ref(l.move_id) ? [[l.id, ref(l.move_id)![0]] as [number, number]] : [])));
@@ -246,10 +255,20 @@ async function fullPaymentOf(client: OdooReadClient, range: { start: string; end
   const creditLines = rows.length ? await readAll<{ id: number; move_id: M2O; journal_id: M2O }>(client, 'account.move.line', rows.flatMap((r) => (ref(r.credit_move_id) ? [ref(r.credit_move_id)![0]] : [])), ['move_id', 'journal_id']) : [];
   const journals = creditLines.length ? await readAll<{ id: number; type: string }>(client, 'account.journal', creditLines.flatMap((l) => (ref(l.journal_id) ? [ref(l.journal_id)![0]] : [])), ['type']) : [];
   const journalType = new Map(journals.map((j) => [j.id, j.type]));
+  // Credit notes among the settling moves, to tell credit already deducted in its own period.
+  const notes = creditRule && creditLines.length ? await readAll<{ id: number; move_type: string; invoice_date: string | false }>(client, 'account.move', creditLines.flatMap((l) => (ref(l.move_id) ? [ref(l.move_id)![0]] : [])), ['move_type', 'invoice_date']) : [];
+  const noteDate = new Map(notes.flatMap((n) => (n.move_type === 'out_refund' && date(n.invoice_date) ? [[n.id, date(n.invoice_date)!] as [number, string]] : [])));
   const creditOf = new Map(creditLines.map((l) => [l.id, { move: ref(l.move_id), cash: ['bank', 'cash'].includes(journalType.get(ref(l.journal_id)?.[0] ?? -1) ?? '') }]));
   const settlements: InvoiceSettlement[] = rows.map((r) => {
     const credit = creditOf.get(ref(r.credit_move_id)?.[0] ?? -1);
-    return { partialId: r.id, invoiceId: receivableMove.get(partialLine.get(r.id)!) ?? -1, amount: Number(r.amount) || 0, date: date(r.max_date), cash: credit?.cash ?? false, name: credit?.move?.[1] ?? ref(r.credit_move_id)?.[1] ?? '' };
+    const noteId = credit?.move?.[0];
+    const issued = noteId !== undefined ? noteDate.get(noteId) : undefined;
+    const on = date(r.max_date);
+    const deducted = Boolean(creditRule && issued && on && creditRule.deducted({ id: noteId!, date: issued }) && on > creditRule.periodEndOf(issued));
+    return {
+      partialId: r.id, invoiceId: receivableMove.get(partialLine.get(r.id)!) ?? -1, amount: Number(r.amount) || 0, date: on, cash: credit?.cash ?? false,
+      ...(deducted ? { credit: true } : {}), name: credit?.move?.[1] ?? ref(r.credit_move_id)?.[1] ?? '',
+    };
   });
   const current = new Set(partials.map((p) => p.id));
   // This period's cash always counts towards its invoice, even if the receivable read missed it.
@@ -271,30 +290,80 @@ async function fullPaymentOf(client: OdooReadClient, range: { start: string; end
 }
 
 /**
- * Credit notes dated in the period and money paid back to customers, so the screen can show them
- * next to the commission. They are never deducted: commission is paid on cash in, and a credit note
- * set against an invoice is not cash, so that invoice simply collects less.
+ * Credit notes dated in the period and money paid back to customers. The part of a credit note not
+ * set against a customer invoice by the period end (left as credit, or refunded) is deducted before
+ * commission: it comes back as `lines`, the note split to its product lines like a collection, with
+ * negative amounts. The part set against an invoice is not deducted: commission is paid on cash in,
+ * so that invoice already collects less. Credit set against an invoice after the period pays that
+ * invoice like cash then (`CreditNoteRule`), so nothing is deducted twice.
  */
-export async function fetchCredits(client: OdooReadClient, range: { start: string; end: string }): Promise<{ credits: CreditNote[]; refunds: { count: number; amount: number } }> {
+export async function fetchCredits(client: OdooReadClient, range: { start: string; end: string }, period: string): Promise<{ credits: CreditNote[]; refunds: { count: number; amount: number }; lines: LedgerLine[] }> {
   const notes = await searchAll<{ id: number; amount_untaxed: number; amount_total: number; reversed_entry_id: M2O }>(client, 'account.move', [
     ['move_type', '=', 'out_refund'], ['state', '=', 'posted'], ['invoice_date', '>=', range.start], ['invoice_date', '<=', range.end],
   ], ['id', 'amount_untaxed', 'amount_total', 'reversed_entry_id']);
   const refunds = await searchAll<{ id: number; amount: number }>(client, 'account.payment', [
     ['payment_type', '=', 'outbound'], ['partner_type', '=', 'customer'], ['state', 'in', ['paid', 'reconciled']], ['date', '>=', range.start], ['date', '<=', range.end],
   ], ['id', 'amount']);
-  const context = await readInvoiceContext(client, notes.map((n) => n.id));
+  const [context, applied] = await Promise.all([readInvoiceContext(client, notes.map((n) => n.id)), appliedToInvoices(client, notes.map((n) => n.id), range.end)]);
   const linesByMove = new Map<number, RawInvoiceLine[]>();
   for (const line of context.invoiceLines) linesByMove.set(line.moveId, [...(linesByMove.get(line.moveId) ?? []), line]);
+
+  // The deducted part of each note, split to its product lines as if paid in full on its date.
+  const deductible = new Map<number, number>();
+  for (const n of notes) {
+    const note = context.invoices.get(n.id);
+    const left = Math.round((Math.abs(Number(n.amount_total) || 0) - (applied.get(n.id) ?? 0)) * 100) / 100;
+    if (note && left > 0) deductible.set(n.id, left);
+  }
+  const chosen = [...deductible.keys()].map((id) => context.invoices.get(id)!);
+  const negate = (l: LedgerLine): LedgerLine => ({ ...l, base: -l.base, gross: -l.gross, qty: -l.qty });
+  const lines = chosen.length ? buildLedger({
+    period, ...context,
+    receipts: chosen.map((i) => ({ key: `CN${i.id}`, name: i.name, cashDate: i.invoiceDate ?? range.start, partnerName: i.partnerName })),
+    partials: chosen.map((i) => ({ id: i.id, receiptKey: `CN${i.id}`, debitLineId: i.id, amount: deductible.get(i.id)! })),
+    debitLineMove: new Map(chosen.map((i) => [i.id, i.id])),
+    invoices: new Map(chosen.map((i) => [i.id, { ...i, amountTotal: Math.abs(i.amountTotal) }])),
+  }).map(negate) : [];
+  const deducted = new Map<number, { base: number; gross: number }>();
+  for (const l of lines) {
+    const d = deducted.get(l.invoiceId ?? -1) ?? { base: 0, gross: 0 };
+    d.base -= l.base;
+    d.gross -= l.gross;
+    deducted.set(l.invoiceId ?? -1, d);
+  }
+
   const credits = notes.flatMap((n): CreditNote[] => {
     const note = context.invoices.get(n.id);
     if (!note) return [];
     const owner = ownerOf(note, linesByMove.get(n.id) ?? [], context);
+    const d = deducted.get(n.id);
     return [{
       id: n.id, name: note.name, date: note.invoiceDate ?? range.start, partnerName: note.partnerName, originName: ref(n.reversed_entry_id)?.[1] ?? null,
       odooUserId: owner.user?.[0] ?? null, repName: owner.user?.[1] ?? null, base: Math.abs(Number(n.amount_untaxed) || 0), gross: Math.abs(Number(n.amount_total) || 0),
+      deductedBase: Math.round((d?.base ?? 0) * 100) / 100, deductedGross: Math.round((d?.gross ?? 0) * 100) / 100,
     }];
   });
-  return { credits, refunds: { count: refunds.length, amount: refunds.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) } };
+  return { credits, refunds: { count: refunds.length, amount: refunds.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) }, lines };
+}
+
+/** Per credit note: the amount (with VAT) set against customer invoices up to `end`. */
+async function appliedToInvoices(client: OdooReadClient, noteIds: readonly number[], end: string): Promise<Map<number, number>> {
+  const receivables = noteIds.length ? await searchIn<{ id: number; move_id: M2O; matched_debit_ids: number[] }>(client, 'account.move.line', 'move_id', noteIds,
+    [['account_type', '=', 'asset_receivable']], ['id', 'move_id', 'matched_debit_ids']) : [];
+  const noteOfPartial = new Map(receivables.flatMap((l) => (ref(l.move_id) ? l.matched_debit_ids.map((id) => [id, ref(l.move_id)![0]] as [number, number]) : [])));
+  const partials = noteOfPartial.size ? await readAll<{ id: number; amount: number; max_date: string | false; debit_move_id: M2O }>(client, 'account.partial.reconcile', [...noteOfPartial.keys()], ['id', 'amount', 'max_date', 'debit_move_id']) : [];
+  const inTime = partials.filter((p) => { const on = date(p.max_date); return on !== null && on <= end && ref(p.debit_move_id); });
+  const debitLines = inTime.length ? await readAll<{ id: number; move_id: M2O }>(client, 'account.move.line', inTime.map((p) => ref(p.debit_move_id)![0]), ['move_id']) : [];
+  const moveOfLine = new Map(debitLines.flatMap((l) => (ref(l.move_id) ? [[l.id, ref(l.move_id)![0]] as [number, number]] : [])));
+  const moves = moveOfLine.size ? await readAll<{ id: number; move_type: string }>(client, 'account.move', [...moveOfLine.values()], ['move_type']) : [];
+  const invoiceMoves = new Set(moves.filter((m) => m.move_type === 'out_invoice').map((m) => m.id));
+  const out = new Map<number, number>();
+  for (const p of inTime) {
+    if (!invoiceMoves.has(moveOfLine.get(ref(p.debit_move_id)![0]) ?? -1)) continue;
+    const note = noteOfPartial.get(p.id)!;
+    out.set(note, (out.get(note) ?? 0) + (Number(p.amount) || 0));
+  }
+  return out;
 }
 
 /**

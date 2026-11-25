@@ -5,17 +5,18 @@ import { can } from '@/lib/auth/permissions';
 import type { Role } from '@/lib/auth/roles';
 import { getCurrentUser } from '@/lib/auth/session';
 import { excludedReasonOf, pickStepPercent, stepRangeLabel } from '@/lib/commission/calc';
+import { lineFormula } from '@/lib/commission/explain';
 import { fetchSales } from '@/lib/commission/odoo';
 import { isPeriod, periodDates } from '@/lib/commission/period';
 import { byRepAndGroup, commissionByInvoice, type InvoiceCommissionRow, type RepGroupRow } from '@/lib/commission/report';
-import { getRun, getSource, listLedger, listPricelists, listSteps } from '@/lib/commission/repo';
+import { getRun, getSource, listLedger, listPricelists, listRates, listSteps } from '@/lib/commission/repo';
 import { clientFor, periodCalendar } from '@/lib/commission/service';
 import { statementSettings } from '@/lib/commission/statement';
 import { BONUS_BASE_LABELS, EXCLUDED_LABELS, OWNER_FROM_LABELS, PAYMENT_KIND_LABELS, PRICE_GROUP_LABELS, TARGET_MODE_LABELS, type LineResult, type RepResult, type StoredLedgerLine } from '@/lib/commission/types';
 
 export const dynamic = 'force-dynamic';
 
-type CollectionRow = StoredLedgerLine & { stepPercent: number | null; priceGroup: string; result?: LineResult };
+type CollectionRow = StoredLedgerLine & { stepPercent: number | null; priceGroup: string; result?: LineResult; formula?: string };
 
 const LEDGER_COLUMNS: Column<CollectionRow>[] = [
   { header: 'ประเภท', value: (r) => (r.kind === 'RETRO' ? `ปรับย้อนหลัง ${r.originPeriod}` : 'เงินเข้า') },
@@ -42,6 +43,7 @@ const LEDGER_COLUMNS: Column<CollectionRow>[] = [
   { header: '% ราคาพิเศษ', value: (r) => r.result?.specialPercent ?? '' },
   { header: 'ค่าคอม', value: (r) => (r.result ? Math.round(r.result.commission * 100) / 100 : '') },
   { header: 'ผล', value: (r) => { if (!r.result) return ''; const reason = excludedReasonOf(r, r.result); return reason ? `ไม่คิด: ${EXCLUDED_LABELS[reason]}` : 'นำมาคิด'; } },
+  { header: 'สูตรคิดค่าคอม', value: (r) => r.formula ?? '' },
   { header: 'ตรวจสอบ', value: (r) => r.issues.join(' · ') },
 ];
 
@@ -51,6 +53,8 @@ const REP_COLUMNS: Column<RepResult>[] = [
   { header: 'ยอดเก็บ ก่อน VAT', value: (r) => r.base },
   { header: 'ยอดเก็บ รวม VAT', value: (r) => r.gross },
   { header: 'นำมาคิดค่าคอม ก่อน VAT', value: (r) => r.counted ?? r.base },
+  { header: 'หัก CN ออกจากยอดเก็บ ก่อน VAT', value: (r) => -(r.creditNoteDeductedBase ?? 0) },
+  { header: 'ยอดเก็บหลังหัก CN (เทียบเป้า)', value: (r) => r.targetBase ?? r.base },
   ...(Object.keys(EXCLUDED_LABELS) as (keyof typeof EXCLUDED_LABELS)[]).map((reason): Column<RepResult> => ({
     header: `ไม่คิด: ${EXCLUDED_LABELS[reason]}`, value: (r) => r.excluded?.find((e) => e.reason === reason)?.base ?? 0,
   })),
@@ -61,6 +65,7 @@ const REP_COLUMNS: Column<RepResult>[] = [
   { header: 'ได้ค่าคอม %', value: (r) => r.targetPayPercent ?? '' },
   { header: 'ค่าคอมตามอัตรา (ก่อนเป้า)', value: (r) => r.commissionBeforeTarget ?? r.commission },
   { header: 'ค่าคอม', value: (r) => r.commission },
+  { header: 'หักค่าคอม CN', value: (r) => -(r.creditNoteDeduction ?? 0) },
   { header: 'คืนลูกหนี้ค้าง', value: (r) => r.debtRelease ?? 0 },
   { header: 'หักส่วนกลาง', value: (r) => -(r.central ?? 0) },
   { header: 'หักลูกหนี้ค้าง', value: (r) => -(r.debtHold ?? 0) },
@@ -77,7 +82,7 @@ const REP_COLUMNS: Column<RepResult>[] = [
   { header: 'ยกมาหัก', value: (r) => r.carryIn },
   { header: 'จ่าย', value: (r) => r.payable },
   { header: 'ยกไปหัก', value: (r) => r.carryOut },
-  { header: 'CN รอบนี้ ก่อน VAT (ไม่หัก)', value: (r) => r.creditNoteBase ?? 0 },
+  { header: 'CN รอบนี้ ก่อน VAT (ทั้งใบ)', value: (r) => r.creditNoteBase ?? 0 },
   { header: 'CN (ใบ)', value: (r) => r.creditNoteCount ?? 0 },
 ];
 
@@ -88,6 +93,7 @@ function statementColumns(reps: readonly RepResult[], debtDays: number): Column<
   return [
     { header: 'พนักงานขาย', value: (r) => r.repName },
     ...[...labels].map(([key, label]): Column<RepResult> => ({ header: label, value: (r) => r.summary?.find((s) => s.key === key)?.amount ?? 0 })),
+    { header: 'หัก ค่าคอมของใบลดหนี้ (CN)', value: (r) => -(r.creditNoteDeduction ?? 0) },
     { header: `คืนเงินลูกหนี้ค้างชำระ (+${debtDays + 1} วัน)`, value: (r) => r.debtRelease ?? 0 },
     { header: 'Incentive', value: (r) => r.tierBonus ?? 0 },
     { header: 'รวม', value: (r) => (r.subtotal ?? r.commission) + (r.tierBonus ?? 0) },
@@ -115,6 +121,9 @@ function stepColumns(reps: readonly RepResult[]): Column<RepResult>[] {
     header, value: (r) => r.steps?.find((st) => `${st.noSteps ? 'no-steps:' : ''}${st.minDays}-${st.maxDays}-${st.percent}` === key)?.commission ?? 0,
   }));
 }
+
+/** Ledger columns that need a calculated run (left out of `kind=collections`). */
+const RUN_ONLY_HEADERS = new Set(['ค่าคอม', 'ผล', 'สูตรคิดค่าคอม']);
 
 const INVOICE_COLUMNS: Column<InvoiceCommissionRow>[] = [
   { header: 'พนักงานขาย', value: (r) => r.repName },
@@ -149,6 +158,8 @@ const SALES_COLUMNS: Column<RepGroupRow>[] = [
  * days overdue), `kind=run` (per-rep result sheet; lines with the rule used come as `kind=run-lines`, one row per
  * rep × invoice as `kind=run-invoices`),
  * `kind=sales` (sales per rep × price group × family, read live from Odoo). Needs `commission.view`.
+ * `run-invoices` / `run-lines` take `rep` (one rep's key, from the rep detail drawer) and `show`
+ * (`counted` / `excluded`) to export just what the drawer shows, oldest cash first.
  */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
@@ -161,7 +172,15 @@ export async function GET(request: NextRequest) {
   if (!['collections', 'run', 'run-lines', 'run-invoices', 'sales', 'statement'].includes(kind) || !isPeriod(period)) return NextResponse.json({ error: 'bad request' }, { status: 400 });
   const source = await getSource(sp.get('source') ?? '');
   if (!source) return NextResponse.json({ error: 'source not found' }, { status: 404 });
+  const repParam = sp.get('rep');
+  const repKey = repParam !== null && /^-?\d+$/.test(repParam) ? Number(repParam) : null;
+  if (repParam !== null && repKey === null) return NextResponse.json({ error: 'bad request' }, { status: 400 });
+  const show = sp.get('show') === 'counted' || sp.get('show') === 'excluded' ? sp.get('show') : null;
   const name = `commission-${source.name.replace(/[^\p{L}\p{N}]+/gu, '-')}-${period}`;
+  /** One rep only (and counted / not counted only) when asked, for the rep detail drawer. */
+  const shown = (l: StoredLedgerLine, results: ReadonlyMap<string, LineResult>) =>
+    (repKey === null || l.odooUserId === repKey) && (show === null || (excludedReasonOf(l, results.get(l.lineKey)) === null) === (show === 'counted'));
+  const suffix = repKey !== null ? `-rep${repKey}${show ? `-${show}` : ''}` : '';
   let file: Awaited<ReturnType<typeof exportFile>>;
   let count: number;
 
@@ -181,19 +200,24 @@ export async function GET(request: NextRequest) {
   } else if (kind === 'run-invoices') {
     const [ledger, run] = await Promise.all([listLedger(source.id, period), getRun(source.id, period)]);
     const results = new Map((run?.results?.lines ?? []).map((l) => [l.lineKey, l]));
-    const rows = commissionByInvoice(ledger, results).sort((a, b) => (a.repName ?? '').localeCompare(b.repName ?? '', 'th') || b.base - a.base);
+    const rows = commissionByInvoice(ledger.filter((l) => shown(l, results)), results)
+      .sort((a, b) => (a.repName ?? '').localeCompare(b.repName ?? '', 'th') || a.cashDate.localeCompare(b.cashDate));
     count = rows.length;
-    file = await exportFile(rows, INVOICE_COLUMNS, `${name}-invoices`, format);
+    file = await exportFile(rows, INVOICE_COLUMNS, `${name}-invoices${suffix}`, format);
   } else {
-    const [ledger, steps, pricelists, run] = await Promise.all([listLedger(source.id, period), listSteps(source.id), listPricelists(source.id), getRun(source.id, period)]);
+    const [ledger, steps, pricelists, run, liveRates] = await Promise.all([listLedger(source.id, period), listSteps(source.id), listPricelists(source.id), getRun(source.id, period), listRates(source.id)]);
     const groups = new Map(pricelists.map((p) => [p.odooPricelistId, `${PRICE_GROUP_LABELS[p.priceGroup]}${p.isSpecial ? ' (พิเศษ)' : ''}`]));
     const results = new Map((run?.results?.lines ?? []).map((l) => [l.lineKey, l]));
-    const rows: CollectionRow[] = ledger.map((l) => ({
+    // The rates the run was calculated with, so the formula matches the commission shown.
+    const rates = run?.snapshot?.rates ?? liveRates;
+    const rows: CollectionRow[] = ledger.filter((l) => kind !== 'run-lines' || shown(l, results)).map((l) => ({
       ...l, stepPercent: l.invoiceId ? pickStepPercent(steps, l.overdueDays ?? 0, l.cashDate) : null,
       priceGroup: l.pricelistId !== null ? groups.get(l.pricelistId) ?? 'ยังไม่จัดกลุ่ม' : '', result: kind === 'run-lines' ? results.get(l.lineKey) : undefined,
+      formula: kind === 'run-lines' && results.has(l.lineKey) ? lineFormula(l, results.get(l.lineKey), rates).steps : undefined,
     }));
     count = rows.length;
-    file = await exportFile(rows, kind === 'run-lines' ? LEDGER_COLUMNS : LEDGER_COLUMNS.slice(0, -3).concat(LEDGER_COLUMNS.slice(-1)), `${name}-${kind}`, format);
+    // Collections (no run): without the commission, result and formula columns, as before.
+    file = await exportFile(rows, kind === 'run-lines' ? LEDGER_COLUMNS : LEDGER_COLUMNS.filter((c) => !RUN_ONLY_HEADERS.has(c.header)), `${name}-${kind}${kind === 'run-lines' ? suffix : ''}`, format);
   }
   await audit(user.id, 'export', `commission-${kind}`, format, { source: source.id, period, count });
   return new NextResponse(new Uint8Array(file.body), { headers: { 'Content-Type': file.contentType, 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`, 'Cache-Control': 'private, no-store' } });

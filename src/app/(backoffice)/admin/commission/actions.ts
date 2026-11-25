@@ -622,7 +622,7 @@ export async function syncPeriodAction(formData: FormData) {
   revalidatePath(BASE, 'layout');
   await flash('ดึงข้อมูลจาก Odoo แล้ว', {
     icon: 'sync',
-    description: `${ok.receipts} รายการเงินเข้า · ${ok.lines} บรรทัด${ok.retro ? ` · ปรับปรุงย้อนหลัง ${ok.retro}` : ''}${ok.held ? ` · หักลูกหนี้ค้าง ${ok.held} บิล` : ''}${ok.released ? ` · คืนลูกหนี้ค้าง ${ok.released} บิล` : ''}${ok.newCustomers ? ` · ลูกค้าใหม่ ${ok.newCustomers} ราย` : ''}${ok.saleOrders !== null ? ` · เอกสารขาย ${ok.saleOrders} ใบ (incentive)` : ''}${ok.deferred.count ? ` · รอจ่ายครบ ${ok.deferred.count} บิล (${ok.deferred.cash.toLocaleString('th-TH')} บาท ยกไปนับงวดที่จ่ายครบ)` : ''}${ok.refunds.count ? ` · มีเงินคืนลูกค้า ${ok.refunds.count} รายการ (ยังไม่หักอัตโนมัติ ใช้รายการปรับยอด)` : ''}`,
+    description: `${ok.receipts} รายการเงินเข้า · ${ok.lines} บรรทัด${ok.retro ? ` · ปรับปรุงย้อนหลัง ${ok.retro}` : ''}${ok.held ? ` · หักลูกหนี้ค้าง ${ok.held} บิล` : ''}${ok.released ? ` · คืนลูกหนี้ค้าง ${ok.released} บิล` : ''}${ok.newCustomers ? ` · ลูกค้าใหม่ ${ok.newCustomers} ราย` : ''}${ok.saleOrders !== null ? ` · เอกสารขาย ${ok.saleOrders} ใบ (incentive)` : ''}${ok.deferred.count ? ` · รอจ่ายครบ ${ok.deferred.count} บิล (${ok.deferred.cash.toLocaleString('th-TH')} บาท ยกไปนับงวดที่จ่ายครบ)` : ''}${ok.refunds.count ? ` · มีเงินคืนลูกค้า ${ok.refunds.count} รายการ (CN ที่ค้างเป็นเครดิต / คืนเงิน หักตอนกดคำนวณ)` : ''}`,
   });
   back(path, formData, { saved: '1' });
 }

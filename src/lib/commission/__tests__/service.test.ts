@@ -4,7 +4,7 @@ import type { CommissionRun, CommissionSource, LedgerLine } from '../types';
 const repo = vi.hoisted(() => ({
   ensureRun: vi.fn(), getRun: vi.fn(), updateRun: vi.fn(), listBookedFor: vi.fn(), replaceLedger: vi.fn(), listLedger: vi.fn(), listRates: vi.fn(), listSteps: vi.fn(),
   listPricelists: vi.fn(), listTargets: vi.fn(), listSalaries: vi.fn(), listAdjustments: vi.fn(), listReps: vi.fn(), listDebtHolds: vi.fn(), applyDebtPlan: vi.fn(), listPeriodOverrides: vi.fn(),
-  listNewCustomers: vi.fn(), replaceNewCustomers: vi.fn(), upsertReps: vi.fn(), listSaleOrders: vi.fn(), replaceSaleOrders: vi.fn(), saveDeferred: vi.fn(),
+  listNewCustomers: vi.fn(), replaceNewCustomers: vi.fn(), upsertReps: vi.fn(), listSaleOrders: vi.fn(), replaceSaleOrders: vi.fn(), saveDeferred: vi.fn(), creditNoteHistory: vi.fn(),
 }));
 const odoo = vi.hoisted(() => ({ fetchCollections: vi.fn(), fetchCredits: vi.fn(), fetchOverdueInvoices: vi.fn(), fetchPaidInvoiceIds: vi.fn(), fetchFirstInvoices: vi.fn(), fetchRepDirectory: vi.fn(), fetchSaleOrders: vi.fn() }));
 vi.mock('../repo', () => repo);
@@ -31,8 +31,9 @@ beforeEach(() => {
   repo.upsertReps.mockResolvedValue({ added: 0, merged: 0 });
   odoo.fetchRepDirectory.mockResolvedValue({ tags: new Map([[3, [-3, 'Ake']]]), userReps: new Map([[9, [-3, 'Ake']]]), users: [{ id: 8, name: 'A' }] });
   for (const fn of [repo.listRates, repo.listSteps, repo.listPricelists, repo.listTargets, repo.listSalaries, repo.listAdjustments, repo.listReps, repo.listLedger, repo.listBookedFor, repo.listDebtHolds, repo.listPeriodOverrides, repo.listNewCustomers, odoo.fetchOverdueInvoices, odoo.fetchFirstInvoices]) fn.mockResolvedValue([]);
-  odoo.fetchCredits.mockResolvedValue({ credits: [], refunds: { count: 0, amount: 0 } });
+  odoo.fetchCredits.mockResolvedValue({ credits: [], refunds: { count: 0, amount: 0 }, lines: [] });
   odoo.fetchPaidInvoiceIds.mockResolvedValue(new Set());
+  repo.creditNoteHistory.mockResolvedValue({ firstPeriod: null, lastLocked: null, deducted: new Set() });
 });
 
 describe('overdue-invoice holds on sync', () => {
@@ -66,7 +67,7 @@ describe('overdue-invoice holds on sync', () => {
     repo.listPeriodOverrides.mockResolvedValue([{ period: '2026-09', endDate: '2026-09-25', payDate: null }, { period: '2026-10', endDate: '2026-10-22', payDate: null }]);
     odoo.fetchCollections.mockResolvedValue({ lines: [], receipts: 0, refunds: { count: 0, amount: 0 } });
     await service.syncPeriod(source, '2026-10');
-    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-10', { start: '2026-09-26', end: '2026-10-22' });
+    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-10', { start: '2026-09-26', end: '2026-10-22' }, expect.objectContaining({ deducted: expect.any(Function) }));
   });
 
   it('skips the overdue read when the company does not hold debts', async () => {
@@ -93,7 +94,7 @@ describe('syncPeriod', () => {
     repo.listBookedFor.mockResolvedValue([line()]);
     const result = await service.syncPeriod(source, '2026-10');
     expect(result).toMatchObject({ ok: true, lines: 1, retro: 1 });
-    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-09', { start: '2026-08-21', end: '2026-09-20' });
+    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-09', { start: '2026-08-21', end: '2026-09-20' }, expect.objectContaining({ deducted: expect.any(Function) }));
     expect(repo.replaceLedger).toHaveBeenCalledWith('s1', '2026-10', 'RETRO', [expect.objectContaining({ kind: 'RETRO', base: -100, originPeriod: '2026-09' })]);
     expect(repo.updateRun).toHaveBeenCalledWith('run1', ['DRAFT', 'PENDING_APPROVAL'], expect.objectContaining({ status: 'DRAFT', results: null }));
     // Sale orders are pulled only when the incentive is measured on them.
@@ -139,13 +140,38 @@ describe('calculatePeriod', () => {
     repo.ensureRun.mockResolvedValue(runRow({ syncedAt: new Date() }));
     repo.listLedger.mockResolvedValue([line({ originPeriod: '2026-10' })]);
     repo.getRun.mockResolvedValue(runRow({ syncedAt: new Date() }));
-    odoo.fetchCredits.mockResolvedValue({ credits: [{ id: 1, name: 'RINV/1', date: '2026-10-05', partnerName: 'ร้าน', originName: null, odooUserId: 8, repName: 'A', base: 500, gross: 535 }], refunds: { count: 0, amount: 0 } });
+    odoo.fetchCredits.mockResolvedValue({
+      credits: [{ id: 1, name: 'RINV/1', date: '2026-10-05', partnerName: 'ร้าน', originName: null, odooUserId: 8, repName: 'A', base: 500, gross: 535, deductedBase: 50, deductedGross: 53.5 }], refunds: { count: 0, amount: 0 },
+      lines: [line({ originPeriod: '2026-10', lineKey: 'CN1:R1:L1', receiptName: 'RINV/1', base: -50, gross: -53.5, qty: -1 })],
+    });
     await service.calculatePeriod(source, '2026-10');
-    expect(repo.updateRun.mock.calls[0][2].results.reps[0]).toMatchObject({ creditNoteBase: 500, creditNoteCount: 1 });
+    const patch = repo.updateRun.mock.calls[0][2];
+    expect(patch.results.reps[0]).toMatchObject({ base: 100, creditNoteBase: 500, creditNoteCount: 1, creditNoteDeductedBase: 50, targetBase: 50 });
+    expect(patch.snapshot.creditLines).toHaveLength(1);
+    expect(odoo.fetchCredits).toHaveBeenCalledWith(expect.anything(), expect.any(Object), '2026-10');
     odoo.fetchCredits.mockRejectedValue(new Error('timeout'));
     repo.updateRun.mockClear();
     expect(await service.calculatePeriod(source, '2026-10')).toMatchObject({ ok: true });
     expect(repo.updateRun.mock.calls[0][2].results.issues).toContainEqual({ message: expect.stringContaining('ดึงใบลดหนี้ (CN)') });
+  });
+});
+
+describe('creditNoteRule', () => {
+  it('treats notes deducted by locked runs and notes of still-open periods as deducted', async () => {
+    repo.creditNoteHistory.mockResolvedValue({ firstPeriod: '2026-08', lastLocked: '2026-09', deducted: new Set([5]) });
+    const rule = await service.creditNoteRule(source);
+    expect(rule.deducted({ id: 5, date: '2026-01-01' })).toBe(true);
+    expect(rule.deducted({ id: 6, date: '2026-09-20' })).toBe(false);
+    expect(rule.deducted({ id: 6, date: '2026-09-21' })).toBe(true);
+    expect(rule.periodEndOf('2026-10-05')).toBe('2026-10-20');
+  });
+
+  it('starts at the first run when none is locked, and deducts nothing without runs', async () => {
+    repo.creditNoteHistory.mockResolvedValue({ firstPeriod: '2026-10', lastLocked: null, deducted: new Set() });
+    expect((await service.creditNoteRule(source)).deducted({ id: 1, date: '2026-09-20' })).toBe(false);
+    expect((await service.creditNoteRule(source)).deducted({ id: 1, date: '2026-09-21' })).toBe(true);
+    repo.creditNoteHistory.mockResolvedValue({ firstPeriod: null, lastLocked: null, deducted: new Set() });
+    expect((await service.creditNoteRule(source)).deducted({ id: 1, date: '2026-10-01' })).toBe(false);
   });
 });
 

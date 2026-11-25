@@ -49,13 +49,13 @@ export default async function MyCommissionPage() {
           <div className="grid gap-3 md:grid-cols-2">
             {[{ label: 'รอบนี้', period: b.current, data: b.now }, { label: 'รอบก่อน', period: shiftPeriod(b.current, -1), data: b.previous }].map(({ label, period, data }) => {
               const r = data.rep;
-              const pct = r?.target ? Math.min(100, Math.round((r.base / r.target) * 100)) : null;
+              const pct = r?.target ? Math.min(100, Math.round(((r.targetBase ?? r.base) / r.target) * 100)) : null;
               return (
                 <div key={period} className="rounded-lg border border-border p-3">
                   <p className="text-xs text-muted-foreground">{label} · {periodLabel(period, b.calendar)} · จ่าย {thaiDay(periodDates(b.calendar, period).payDate)}</p>
                   <p className="mt-1 text-xl font-bold tabular-nums">{baht(r?.payable ?? 0)} <span className="text-xs font-normal text-muted-foreground">{data.locked ? 'อนุมัติแล้ว' : 'ประมาณการ'}</span></p>
-                  <p className="text-sm">ยอดเก็บ {baht(r?.base ?? 0)}{r?.target ? ` / เป้า ${baht(r.target)}` : ' · ไม่ใช้เป้า'}</p>
-                  {pct !== null && <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className={cn('h-full', r && r.base >= (r.target ?? 0) ? 'bg-emerald-500' : 'bg-amber-500')} style={{ width: `${pct}%` }} /></div>}
+                  <p className="text-sm">ยอดเก็บ{r?.creditNoteDeductedBase ? 'หลังหัก CN' : ''} {baht(r?.targetBase ?? r?.base ?? 0)}{r?.target ? ` / เป้า ${baht(r.target)}` : ' · ไม่ใช้เป้า'}</p>
+                  {pct !== null && <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className={cn('h-full', r && (r.targetBase ?? r.base) >= (r.target ?? 0) ? 'bg-emerald-500' : 'bg-amber-500')} style={{ width: `${pct}%` }} /></div>}
                   {!data.run?.syncedAt && <p className="mt-1 text-xs text-muted-foreground">ยังไม่มีการดึงข้อมูลรอบนี้</p>}
                 </div>
               );

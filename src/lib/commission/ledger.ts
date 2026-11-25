@@ -261,8 +261,12 @@ export function retroDiff(paid: readonly LedgerLine[], fresh: readonly LedgerLin
   return out;
 }
 
-/** Anything reconciled with an invoice's receivable: cash (payment / bank line) or not (credit note, write-off). */
-export type InvoiceSettlement = { partialId: number; invoiceId: number; amount: number; date: string | null; cash: boolean; name: string };
+/**
+ * Anything reconciled with an invoice's receivable: cash (payment / bank line) or not (credit note, write-off).
+ * `credit`: credit left over from a credit note of an earlier period, already deducted from commission
+ * there, so it pays the invoice like cash (otherwise the same credit note would be deducted twice).
+ */
+export type InvoiceSettlement = { partialId: number; invoiceId: number; amount: number; date: string | null; cash: boolean; credit?: boolean; name: string };
 
 /** An invoice with cash in the period that is not fully paid by the period end: counted when it is. */
 export type DeferredInvoice = { invoiceId: number; invoiceName: string; partnerName: string; amountTotal: number; settled: number; cashThisPeriod: number };
@@ -270,8 +274,9 @@ export type DeferredInvoice = { invoiceId: number; invoiceName: string; partnerN
 /**
  * Invoices are counted only in the period they become fully paid (everything reconciled with them,
  * cash or credit note, by the period end covers the total). Returns the invoices to defer, and for
- * invoices completed in this period the cash settled in earlier periods (which was deferred then),
- * so the whole invoice is counted now. Partials already in this period's cash are not repeated.
+ * invoices completed in this period the cash settled in earlier periods (which was deferred then)
+ * and any deducted credit-note credit (see `InvoiceSettlement.credit`), so the whole invoice is
+ * counted now. Partials already in this period's cash are not repeated.
  */
 export function planFullPayment(input: {
   range: { start: string; end: string };
@@ -294,7 +299,9 @@ export function planFullPayment(input: {
     // the earlier cash was counted then.
     const before = list.filter((s) => !input.currentPartialIds.has(s.partialId) && s.date !== null && s.date < input.range.start);
     if (before.reduce((sum, s) => sum + s.amount, 0) >= invoice.amountTotal - 0.01) continue;
-    earlier.push(...before.filter((s) => s.cash));
+    earlier.push(...before.filter((s) => s.cash || s.credit));
+    // Deducted credit applied in this period pays the invoice like this period's cash.
+    earlier.push(...list.filter((s) => s.credit && !input.currentPartialIds.has(s.partialId) && s.date !== null && s.date >= input.range.start && s.date <= input.range.end));
   }
   return { deferred, earlier };
 }

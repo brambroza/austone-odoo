@@ -25,13 +25,14 @@ export function CommissionStatement({ company, periodText, payText, rep, debtDay
 }) {
   const rows: { label: string; value: number; note: string | undefined }[] = [
     ...rep.summary.map((s) => ({ label: s.label, value: s.amount, note: s.base ? `ยอดเก็บก่อน VAT ${money.format(s.base)}${s.rates?.length ? ` · อัตรา ${s.rates.join(', ')}` : ''}` : undefined })),
+    ...(rep.creditNoteDeduction ? [{ label: 'หัก ค่าคอมของใบลดหนี้ (CN)', value: -rep.creditNoteDeduction, note: `CN ที่หักก่อน VAT ${money.format(rep.creditNoteDeductedBase ?? 0)}` }] : []),
     { label: `คืนเงินลูกหนี้ค้างชำระ (+${debtDays + 1} วัน)`, value: rep.debtRelease, note: undefined },
   ];
   // Incentive (sales-bonus tier) as the last row of the list; it is not part of the central-fund base.
   const incentive = rep.tier ? rep.tierBonus ?? 0 : 0;
   if (rep.tier) {
     const onOrders = isSalesBase(rep.bonusBase);
-    const measured = onOrders ? `${BONUS_BASE_LABELS[rep.bonusBase!]} ${money.format(rep.saleOrderBase ?? 0)} (${rep.saleOrderCount ?? 0} ใบ)` : `ยอดเก็บ ${money.format(rep.base)}`;
+    const measured = onOrders ? `${BONUS_BASE_LABELS[rep.bonusBase!]} ${money.format(rep.saleOrderBase ?? 0)} (${rep.saleOrderCount ?? 0} ใบ)` : `ยอดเก็บ${rep.creditNoteDeductedBase ? 'หลังหัก CN' : ''} ${money.format(rep.targetBase ?? rep.base)}`;
     const salary = rep.tier.salary !== undefined ? ` · เงินเดือนขั้น ${money.format(rep.tier.salary)} − เงินเดือน ${rep.salary == null ? 'ยังไม่ตั้ง' : money.format(rep.salary)}` : '';
     rows.push({
       label: `Incentive ขั้น ${rep.tier.index}`,
@@ -85,7 +86,8 @@ export function CommissionStatement({ company, periodText, payText, rep, debtDay
           {(rep.excluded ?? []).map((e) => <Fragment key={e.reason}><dt className="pl-3 text-muted-foreground">ไม่คิด: {EXCLUDED_LABELS[e.reason]}</dt><dd className="text-right tabular-nums text-muted-foreground">{money.format(e.base)}</dd></Fragment>)}
           <dt>เป้า</dt><dd className="text-right">{!rep.target ? 'ไม่ใช้เป้า' : `${money.format(rep.target)} · ${targetNote(rep) ?? (rep.targetMet ? 'ถึงเป้า' : 'ไม่ถึงเป้า ไม่ได้ค่าคอมรอบนี้')}`}</dd>
           {rep.commissionBeforeTarget !== undefined && rep.commissionBeforeTarget !== rep.commission && <><dt>ค่าคอมเต็มตามอัตรา (ก่อนใช้เป้า)</dt><dd className="text-right tabular-nums">{money.format(rep.commissionBeforeTarget)}</dd></>}
-          {rep.creditNoteCount ? <><dt className="text-muted-foreground">ใบลดหนี้ (CN) รอบนี้ {rep.creditNoteCount} ใบ · ไม่หักค่าคอม</dt><dd className="text-right tabular-nums text-muted-foreground">{money.format(rep.creditNoteBase ?? 0)}</dd></> : null}
+          {rep.creditNoteCount ? <><dt className="text-muted-foreground">ใบลดหนี้ (CN) รอบนี้ {rep.creditNoteCount} ใบ</dt><dd className="text-right tabular-nums text-muted-foreground">{money.format(rep.creditNoteBase ?? 0)}</dd></> : null}
+          {rep.creditNoteDeductedBase ? <><dt className="pl-3 text-destructive">หัก CN ออกจากยอดเก็บ (ส่วนที่ไม่ได้ตัดกับบิลในรอบ)</dt><dd className="text-right tabular-nums text-destructive">{amount(rep.creditNoteDeductedBase, true)}</dd><dt>ยอดเก็บหลังหัก CN (ใช้เทียบเป้า)</dt><dd className="text-right tabular-nums">{money.format(rep.targetBase ?? rep.base)}</dd></> : null}
         </dl>
       </div>
       {rep.newCustomers?.length ? (

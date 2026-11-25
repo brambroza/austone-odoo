@@ -81,7 +81,7 @@ type LineOutcome = Pick<LineResult, 'rateId' | 'stepPercent' | 'commission'>;
 /**
  * One row per invoice (all receipts and product lines of it in the period summed): what makes up a
  * rep's collected total and commission, so "ยอดเก็บ 1 ล้าน" can be traced to its invoices. Cash not
- * applied to an invoice keeps one row per receipt; RETRO lines stay apart. Largest base first.
+ * applied to an invoice keeps one row per receipt; RETRO lines stay apart. Sorted by cash date (oldest first).
  */
 /** Row key of a line in `commissionByInvoice` (kind + invoice, or kind + receipt for cash not on an invoice). */
 export const invoiceKeyOf = (l: Pick<LedgerLine, 'kind' | 'invoiceId' | 'lineKey'>): string => `${l.kind}:${l.invoiceId ?? l.lineKey.split(':').slice(0, 2).join(':')}`;
@@ -115,7 +115,8 @@ export function commissionByInvoice(lines: readonly LedgerLine[], results: Reado
   }
   return [...map.values()]
     .map((r) => ({ ...r, qty: Math.round(r.qty * 100) / 100, base: round2(r.base), gross: round2(r.gross), counted: round2(r.counted), commission: round2(r.commission) }))
-    .sort((a, b) => b.base - a.base || (a.invoiceName ?? '').localeCompare(b.invoiceName ?? ''));
+    // By the day the money came in (an invoice paid in parts: its last cash day), then invoice number; cash not on an invoice last.
+    .sort((a, b) => a.cashDate.localeCompare(b.cashDate) || Number(a.invoiceName === null) - Number(b.invoiceName === null) || (a.invoiceName ?? '').localeCompare(b.invoiceName ?? ''));
 }
 
 export type RepGroupRow = {

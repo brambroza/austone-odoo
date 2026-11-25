@@ -1,7 +1,8 @@
 /**
  * Commission calculator. Per ledger line:
  *   rate (% of base before VAT, % of base incl. VAT, or baht per unit) × special-price % × overdue-step %
- * then per rep: no pay when the period's collected base is below the target (gate), statement rows,
+ * then per rep: the deducted part of the period's credit notes taken off the collected base and the
+ * commission, no pay when that base is below the target (gate), statement rows,
  * central fund and overdue-invoice deductions, manual adjustments and any negative balance carried
  * from the previous period. Pure, no I/O.
  */
@@ -117,9 +118,11 @@ export type CalcInput = {
   statement?: StatementSettings;
   /** Overdue-invoice holds; those held or given back in `period` count. */
   holds?: readonly Pick<DebtHold, 'odooUserId' | 'amount' | 'heldPeriod' | 'releasedPeriod' | 'invoiceName'>[];
-  /** Credit notes and customer refunds of the period: shown with the results, never deducted. */
+  /** Credit notes and customer refunds of the period, shown with the results. */
   credits?: readonly CreditNote[];
   refunds?: { count: number; amount: number };
+  /** Deducted part of the credit notes by product line (negative amounts, see `fetchCredits`). */
+  creditLines?: readonly LedgerLine[];
   /** Sales-bonus ladder and new-customer amount; none when missing. */
   bonus?: BonusSettings;
   /** How the target turns into commission; GATE when missing. */
@@ -169,12 +172,14 @@ export function lineCommission(line: LedgerLine, input: Pick<CalcInput, 'rates' 
 }
 
 /**
- * Calculates a whole run. Lines without a rep are reported but paid to nobody. A rep with no
+ * Calculates a whole run. Lines without a rep are reported but paid to nobody. The deducted part of
+ * the period's credit notes (`creditLines`) is taken off the rep's base before the target and the
+ * ladder, and the commission it would have earned is taken off the commission (not below 0). A rep with no
  * target (blank or 0) has no gate and is paid in full, as before targets existed.
  * The target mode (`target.ts`) sets the % of this period's commission paid: GATE pays all or
  * nothing, EXCESS the share above the target, PROPORTIONAL up to 100%, LADDER by % of target steps.
  * Corrections of earlier periods (RETRO) are not scaled; at 0% only the negative ones still count. Then, per rep, as on the client's statement sheet:
- *   รวม = commission per statement row + holds given back this period
+ *   รวม = commission per statement row − credit-note commission + holds given back this period
  *   − central fund % of รวม − overdue-invoice holds taken this period + adjustments + carried balance.
  * A negative result is not paid and carries forward. The sales bonus of the tier the rep's collections
  * reach and the new-customer bonus are added after the deductions, and only when the target is met.
@@ -192,12 +197,14 @@ export function calculateRun(input: CalcInput): RunResults {
   type Acc = {
     name: string; base: number; gross: number; lines: number; buckets: Map<string, Bucket>; held: number; released: number;
     counted: number; before: number; excluded: Map<ExcludedReason, ExcludedAmount>; creditBase: number; credits: number; steps: Map<string, StepAmount>;
+    /** Deducted credit-note base (negative) and the commission it would have earned (negative). */
+    cnBase: number; cnCommission: number;
   };
   const acc = new Map<number, Acc>();
   const accFor = (id: number, name: string | null) => {
     let a = acc.get(id);
     if (!a) {
-      a = { name: names.get(id) ?? name ?? `Odoo user #${id}`, base: 0, gross: 0, lines: 0, buckets: new Map(), held: 0, released: 0, counted: 0, before: 0, excluded: new Map(), creditBase: 0, credits: 0, steps: new Map() };
+      a = { name: names.get(id) ?? name ?? `Odoo user #${id}`, base: 0, gross: 0, lines: 0, buckets: new Map(), held: 0, released: 0, counted: 0, before: 0, excluded: new Map(), creditBase: 0, credits: 0, steps: new Map(), cnBase: 0, cnCommission: 0 };
       acc.set(id, a);
     }
     return a;
@@ -276,6 +283,24 @@ export function calculateRun(input: CalcInput): RunResults {
     a.credits += 1;
   }
 
+  // Credit notes: priced like the goods they return (same rate and special price, no overdue step),
+  // then taken off the rep's base and commission.
+  const noRepNotes = new Set<string>();
+  for (const line of input.creditLines ?? []) {
+    if (line.odooUserId === null) {
+      noRepNotes.add(line.receiptName);
+      continue;
+    }
+    if (input.inactive?.has(line.odooUserId)) continue;
+    const pricelist = line.pricelistId !== null ? pricelists.get(line.pricelistId) : undefined;
+    const { issue, commission } = lineCommission(line, { rates: input.rates, steps: [] }, pricelist);
+    if (issue) issues.push({ message: `ใบลดหนี้ ${line.receiptName}: ${issue} จึงไม่หักค่าคอมส่วนนี้` });
+    const a = accFor(line.odooUserId, line.repName);
+    a.cnBase += line.base;
+    a.cnCommission += commission;
+  }
+  for (const name of noRepNotes) issues.push({ message: `ใบลดหนี้ ${name} ไม่มีพนักงานขาย จึงไม่ได้หักใคร` });
+
   const newByRep = new Map<number, { partnerName: string; invoiceName: string }[]>();
   for (const c of input.newCustomers ?? []) {
     if (c.period !== input.period) continue;
@@ -317,23 +342,28 @@ export function calculateRun(input: CalcInput): RunResults {
   const reps: RepResult[] = [...acc.entries()].map(([odooUserId, a]) => {
     const target = targets.has(odooUserId) ? targets.get(odooUserId)! : null;
     const base = round2(a.base);
-    const targetMet = target === null || target === 0 || base >= target;
+    // Credit notes come off the collected base before it is measured against the target / ladder.
+    const creditNoteDeductedBase = round2(-a.cnBase);
+    const targetBase = round2(a.base + a.cnBase);
+    const targetMet = target === null || target === 0 || targetBase >= target;
     // Share of this period's commission the target lets through (100% without a target).
-    const payPercent = target === null ? 100 : targetPayPercent(targetRule, base, target);
+    const payPercent = target === null ? 100 : targetPayPercent(targetRule, targetBase, target);
     const summary = rows.map((row) => {
       const b = a.buckets.get(row.key);
       return { key: row.key, label: row.label, amount: b ? round2(payPercent > 0 ? (b.normal * payPercent) / 100 + b.retro : b.retroNegative) : 0, base: round2(b?.base ?? 0), rates: [...(b?.rates ?? [])] };
     }).filter((s) => s.key !== OTHER_SUMMARY.key || s.amount !== 0);
     const commission = round2(summary.reduce((s, r) => s + r.amount, 0));
+    // Commission the credit notes take back, at the same target share; never below 0 commission.
+    const creditNoteDeduction = round2(Math.min(Math.max(0, commission), Math.max(0, (-a.cnCommission * payPercent) / 100)));
     const debtRelease = round2(a.released);
-    const subtotal = round2(commission + debtRelease);
+    const subtotal = round2(commission - creditNoteDeduction + debtRelease);
     const central = round2((Math.max(0, subtotal) * statement.centralPercent) / 100);
     const debtHold = round2(a.held);
     const adj = round2(adjustments.get(odooUserId) ?? 0);
     const carryIn = round2(Math.min(0, input.carryIn.get(odooUserId) ?? 0));
     const ordersOf = orders.get(odooUserId);
     const saleOrderBase = round2(ordersOf?.base ?? 0);
-    const tier = pickTier(tiers, onOrders ? saleOrderBase : base);
+    const tier = pickTier(tiers, onOrders ? saleOrderBase : targetBase);
     // On sale orders the incentive needs no target; on collections only when the target is met (as before).
     const bonusAllowed = onOrders || targetMet;
     const salary = bySalary ? salaries.get(odooUserId) ?? null : undefined;
@@ -344,9 +374,9 @@ export function calculateRun(input: CalcInput): RunResults {
     const total = round2(subtotal - central - debtHold + tierBonus + newCustomerBonus + adj + carryIn);
     return {
       odooUserId, repName: a.name, base, gross: round2(a.gross), lines: a.lines, target, targetMet: target !== null && targetMet, commission,
-      targetMode: targetRule.targetMode, targetPercent: achievementPercent(base, target) === null ? null : round2(achievementPercent(base, target)!), targetPayPercent: round2(payPercent),
+      targetMode: targetRule.targetMode, targetPercent: achievementPercent(targetBase, target) === null ? null : round2(achievementPercent(targetBase, target)!), targetPayPercent: round2(payPercent),
       counted: round2(a.counted), excluded: [...a.excluded.values()].map((e) => ({ ...e, base: round2(e.base) })), commissionBeforeTarget: round2(a.before),
-      creditNoteBase: round2(a.creditBase), creditNoteCount: a.credits,
+      creditNoteBase: round2(a.creditBase), creditNoteCount: a.credits, creditNoteDeductedBase, creditNoteDeduction, targetBase,
       steps: [...a.steps.values()].sort((x, y) => (x.minDays ?? Infinity) - (y.minDays ?? Infinity))
         .map((st) => ({ ...st, base: round2(st.base), beforeStep: round2(st.beforeStep), commission: round2(st.commission) })),
       summary, debtRelease, subtotal, centralPercent: statement.centralPercent, central, debtHold,

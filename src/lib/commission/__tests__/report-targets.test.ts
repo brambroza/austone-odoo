@@ -39,10 +39,11 @@ describe('commissionByInvoice', () => {
       line({ lineKey: 'P1:R2:L3', invoiceId: 2, invoiceName: 'INV/2', base: 300 }),
       line({ lineKey: 'P1:R9', invoiceId: null, invoiceName: null, productId: null, base: 20 }),
     ], results);
-    expect(rows.map((r) => r.invoiceName)).toEqual(['INV/2', 'INV/1', null]);
-    expect(rows[1]).toMatchObject({ receipts: ['PBNK/1', 'PBNK/2'], cashDate: '2026-10-12', overdueDays: 11, families: ['AUSTONE-PCR', 'AUSTONE-TBR'], qty: 2, base: 150, gross: 160.5, counted: 150, commission: 15.5, lines: 2 });
+    // By cash date: INV/2 and the deposit on 8 Oct (deposit last), INV/1 on its last cash day 12 Oct.
+    expect(rows.map((r) => r.invoiceName)).toEqual(['INV/2', null, 'INV/1']);
+    expect(rows[2]).toMatchObject({ receipts: ['PBNK/1', 'PBNK/2'], cashDate: '2026-10-12', overdueDays: 11, families: ['AUSTONE-PCR', 'AUSTONE-TBR'], qty: 2, base: 150, gross: 160.5, counted: 150, commission: 15.5, lines: 2 });
     expect(rows[0]).toMatchObject({ base: 300, counted: 0, commission: 0 });
-    expect(rows[2]).toMatchObject({ base: 20, counted: 0, qty: 0 });
+    expect(rows[1]).toMatchObject({ base: 20, counted: 0, qty: 0 });
   });
 });
 

@@ -232,6 +232,31 @@ describe('calculateRun breakdown', () => {
   });
 });
 
+describe('calculateRun credit notes', () => {
+  const cn = (over: Partial<LedgerLine> = {}) => line({ lineKey: 'CN1:R1:L1', receiptName: 'RINV/1', invoiceName: 'RINV/1', overdueDays: 0, base: -20_000, gross: -21_400, qty: -2, ...over });
+
+  it('takes the credit note off the base before the target and off the commission at the goods\' rate', () => {
+    const r = run([line({ overdueDays: 3 })], { creditLines: [cn()] });
+    // 100,000 at 0.9% × 110% = 990; the credit note at 0.9% with no overdue step = 180.
+    expect(r.reps[0]).toMatchObject({ base: 100_000, targetBase: 80_000, creditNoteDeductedBase: 20_000, commission: 990, creditNoteDeduction: 180, subtotal: 810, payable: 810 });
+    expect(r.lines).toHaveLength(1);
+  });
+
+  it('measures the target on the base after credit notes', () => {
+    const targets = [{ id: 't', sourceId: 's', odooUserId: 8, period: '2026-10', amount: 90_000 }];
+    expect(run([line({})], { targets }).reps[0]).toMatchObject({ targetMet: true, commission: 990 });
+    expect(run([line({})], { targets, creditLines: [cn()] }).reps[0]).toMatchObject({ targetMet: false, targetBase: 80_000, commission: 0, creditNoteDeduction: 0, payable: 0, carryOut: 0 });
+  });
+
+  it('never takes more than the commission, and reports notes without a rep or a rate', () => {
+    const r = run([line({ base: 10_000 })], { creditLines: [cn({ base: -500_000 }), cn({ odooUserId: null, receiptName: 'RINV/2' }), cn({ brand: 'X', receiptName: 'RINV/3' })] });
+    expect(r.reps[0]).toMatchObject({ commission: 99, creditNoteDeduction: 99, payable: 0, carryOut: 0 });
+    const messages = r.issues.map((i) => i.message);
+    expect(messages).toContain('ใบลดหนี้ RINV/2 ไม่มีพนักงานขาย จึงไม่ได้หักใคร');
+    expect(messages.some((m) => m.startsWith('ใบลดหนี้ RINV/3: ไม่มีอัตราค่าคอม'))).toBe(true);
+  });
+});
+
 describe('calculateRun statement', () => {
   const statement = statementSettings({ centralPercent: 5, debtDays: 120, debtPercent: 1 });
   const hold = (over: object) => ({ odooUserId: 8, amount: 100, heldPeriod: '2026-10', releasedPeriod: null, invoiceName: 'INV/9', ...over });

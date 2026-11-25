@@ -270,7 +270,11 @@ export const EXCLUDED_LABELS: Record<ExcludedReason, string> = {
 };
 export type ExcludedAmount = { reason: ExcludedReason; base: number; lines: number };
 
-/** A credit note issued in the period, shown next to the rep's figures (not deducted). */
+/**
+ * A credit note issued in the period. The part not set against a customer invoice within the period
+ * (left as credit or refunded) is deducted before commission (`deductedBase`); the part set against
+ * an invoice is not, because that invoice simply collects less cash.
+ */
 export type CreditNote = {
   id: number;
   name: string;
@@ -283,6 +287,9 @@ export type CreditNote = {
   /** Amount before VAT (positive). */
   base: number;
   gross: number;
+  /** Part deducted before commission, before VAT / with VAT (missing in runs calculated before CNs were deducted). */
+  deductedBase?: number;
+  deductedGross?: number;
 };
 
 /** Result per rep for a run. */
@@ -306,16 +313,22 @@ export type RepResult = {
   excluded?: ExcludedAmount[];
   /** Commission the lines earned before the target gate (equals `commission` when the target is met). */
   commissionBeforeTarget?: number;
-  /** Credit notes issued this period for this rep's customers: shown only, never deducted. */
+  /** Credit notes issued this period for this rep's customers (all of them, before VAT) and their count. */
   creditNoteBase?: number;
   creditNoteCount?: number;
+  /** Part of those credit notes deducted from the collected base before the target and commission (before VAT). */
+  creditNoteDeductedBase?: number;
+  /** Commission taken back on that part (positive number, subtracted; never more than `commission`). */
+  creditNoteDeduction?: number;
+  /** Collected base after the credit notes: what the target and the sales ladder are measured on. */
+  targetBase?: number;
   /** Lines with a rate, grouped by the overdue step they fell in (before the target gate). */
   steps?: StepAmount[];
   /** Commission per statement row, in statement order. */
   summary: SummaryAmount[];
   /** Holds given back this period because the overdue invoice was collected. */
   debtRelease: number;
-  /** commission + debtRelease ("รวม" on the statement). */
+  /** commission − creditNoteDeduction + debtRelease ("รวม" on the statement). */
   subtotal: number;
   centralPercent: number;
   /** Central fund deduction (positive number, subtracted). */
@@ -353,7 +366,7 @@ export type RunResults = {
   unassignedBase: number;
   /** Cash applied to something other than an invoice (deposits, write-offs), with VAT; paid to no one. */
   notInvoiceGross?: number;
-  /** Credit notes issued in the period (shown only), and money refunded to customers. */
+  /** Credit notes issued in the period (their deducted part is taken off before commission), and money refunded to customers. */
   credits?: CreditNote[];
   refunds?: { count: number; amount: number };
   totalPayable: number;
@@ -394,6 +407,8 @@ export type RunSnapshot = {
   /** Credit notes and customer refunds of the period, read from Odoo when calculating. */
   credits?: CreditNote[];
   refunds?: { count: number; amount: number };
+  /** Deducted part of the credit notes split to their product lines (negative amounts), priced like collected lines. */
+  creditLines?: LedgerLine[];
   /** Bonus ladder and new-customer amount in force, and the period's new customers. */
   bonus?: BonusSettings;
   /** How the target turned into commission (missing in runs calculated before target modes: GATE). */

@@ -407,6 +407,18 @@ export async function listRuns(sourceId: string): Promise<CommissionRun[]> {
  * the calculated results (only their rep totals, not the lines); `counted` is null for a period not
  * calculated yet, whose collected total then comes from the pulled ledger.
  */
+/**
+ * What the runs say about credit notes: the first period with a run, the last approved / paid one,
+ * and the credit notes those locked runs deducted (`deductedGross` > 0 in their snapshot).
+ */
+export async function creditNoteHistory(sourceId: string): Promise<{ firstPeriod: string | null; lastLocked: string | null; deducted: Set<number> }> {
+  type Row = { period: string; status: RunStatus; credits: { id: number; deductedGross?: number }[] | null };
+  const list = rows<Row>(await db().from('CommissionRun').select('period, status, credits:snapshot->credits').eq('sourceId', sourceId).order('period', { ascending: true }));
+  const locked = list.filter((r) => r.status === 'APPROVED' || r.status === 'PAID');
+  const deducted = new Set(locked.flatMap((r) => (Array.isArray(r.credits) ? r.credits : []).filter((c) => num(c.deductedGross) > 0).map((c) => c.id)));
+  return { firstPeriod: list[0]?.period ?? null, lastLocked: locked.at(-1)?.period ?? null, deducted };
+}
+
 export async function runTotals(sourceId: string, uncalculated: readonly string[]): Promise<Map<string, { collected: number; counted: number | null }>> {
   type Row = { period: string; reps: { base?: number; counted?: number }[] | null; unassigned: number | null };
   const out = new Map<string, { collected: number; counted: number | null }>();

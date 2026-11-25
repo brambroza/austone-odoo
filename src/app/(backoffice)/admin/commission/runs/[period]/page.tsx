@@ -176,6 +176,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
                       <TableCell data-label="ยอดเก็บ" className="text-right tabular-nums">
                         <Link href={drill()} scroll={false} title="ดูว่ามาจากใบแจ้งหนี้ใบไหน" className="hover:underline">{baht(r.base)}</Link>
                         {r.counted !== undefined && <span className="block text-xs text-emerald-700">นำมาคิด {baht(r.counted)}</span>}
+                        {r.creditNoteDeductedBase ? <span className="block text-xs text-destructive">หัก CN {baht(-r.creditNoteDeductedBase)}</span> : null}
                       </TableCell>
                       <TableCell data-label="ไม่นำมาคิด" className="text-xs whitespace-normal">
                         {!r.excluded?.length ? <span className="text-muted-foreground">—</span> : (
@@ -186,7 +187,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
                         )}
                       </TableCell>
                       <TableCell data-label="เป้า" className="text-right text-xs tabular-nums">
-                        {!r.target ? <span className="text-muted-foreground">ไม่ใช้เป้า</span> : <>{baht(r.target)}<span className={cn('block', r.targetMet ? 'text-emerald-700' : 'text-destructive')}>{r.targetMet ? 'ถึงเป้า' : `ไม่ถึงเป้า ขาด ${baht(r.target - r.base)}`}</span>{r.targetPayPercent !== undefined && <span className="block text-muted-foreground">{r.targetPercent != null ? `${Math.round(r.targetPercent)}% · ` : ''}ได้ค่าคอม {Math.round(r.targetPayPercent * 100) / 100}%</span>}</>}
+                        {!r.target ? <span className="text-muted-foreground">ไม่ใช้เป้า</span> : <>{baht(r.target)}<span className={cn('block', r.targetMet ? 'text-emerald-700' : 'text-destructive')}>{r.targetMet ? 'ถึงเป้า' : `ไม่ถึงเป้า ขาด ${baht(r.target - (r.targetBase ?? r.base))}`}</span>{r.targetPayPercent !== undefined && <span className="block text-muted-foreground">{r.targetPercent != null ? `${Math.round(r.targetPercent)}% · ` : ''}ได้ค่าคอม {Math.round(r.targetPayPercent * 100) / 100}%</span>}</>}
                       </TableCell>
                       <TableCell data-label="ค่าคอม" className="text-right tabular-nums">
                         {baht(r.commission)}
@@ -197,11 +198,12 @@ export default async function CommissionRunPage({ params, searchParams }: { para
                         {r.newCustomers?.length ? <span className={cn('block text-xs', r.newCustomerBonus ? 'text-emerald-700' : 'text-muted-foreground')}>ลูกค้าใหม่ {r.newCustomers.length} ราย +{baht(r.newCustomerBonus ?? 0)}</span> : null}
                       </TableCell>
                       <TableCell data-label="หัก / ปรับ" className="text-right text-xs tabular-nums">
+                        {r.creditNoteDeduction ? <span className="block text-destructive">CN {baht(-r.creditNoteDeduction)}</span> : null}
                         {r.central ? <span className="block text-destructive">ส่วนกลาง {r.centralPercent}% {baht(-r.central)}</span> : null}
                         {r.debtHold ? <span className="block text-destructive">ลูกหนี้ค้าง {baht(-r.debtHold)}</span> : null}
                         {r.adjustments ? <span className="block">ปรับ {baht(r.adjustments)}</span> : null}
                         {r.carryIn ? <span className="block text-destructive">ยกมา {baht(r.carryIn)}</span> : null}
-                        {!r.central && !r.debtHold && !r.adjustments && !r.carryIn && '—'}
+                        {!r.creditNoteDeduction && !r.central && !r.debtHold && !r.adjustments && !r.carryIn && '—'}
                       </TableCell>
                       <TableCell data-label="จ่ายจริง" className="text-right font-semibold tabular-nums">{baht(r.payable)}{r.carryOut < 0 && <span className="block text-xs font-normal text-destructive">ยกไปหัก {baht(r.carryOut)}</span>}</TableCell>
                       <TableCell data-label="CN" className="text-right text-xs tabular-nums">{r.creditNoteCount ? <Link href={drill()} scroll={false} className="hover:underline">{baht(r.creditNoteBase ?? 0)}<span className="block text-muted-foreground">{r.creditNoteCount} ใบ</span></Link> : '—'}</TableCell>
@@ -267,6 +269,11 @@ export default async function CommissionRunPage({ params, searchParams }: { para
               className={cn('rounded-full border px-3 py-1', showFormula ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted')}>
               {showFormula ? 'ซ่อนสูตรคิดค่าคอม' : 'แสดงสูตรคิดค่าคอม'}
             </Link>
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+            {([['run-invoices', 'Excel รายใบแจ้งหนี้'], ['run-lines', 'Excel รายบรรทัด + สูตร']] as const).map(([kind, text]) => (
+              <a key={kind} href={`/api/admin/commission/export?${ctxQuery(ctx, { kind, rep: String(drillRep), ...(show !== 'all' ? { show } : {}) })}`}
+                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 hover:bg-muted"><Download className="size-3.5" />{text}</a>
+            ))}
             {sp.inv && view === 'line' && (
               <Link href={drillHref({ view: undefined, inv: undefined })} scroll={false} className="rounded-full border border-primary bg-primary/10 px-3 py-1 text-primary-ink">
                 เฉพาะ {drillLines[0]?.invoiceName ?? `#${sp.inv}`} · ✕ กลับไปรายใบแจ้งหนี้
@@ -330,12 +337,14 @@ export default async function CommissionRunPage({ params, searchParams }: { para
           )}
           {drillCredits.length > 0 && (
             <section className="space-y-1 text-sm">
-              <h3 className="font-semibold">ใบลดหนี้ (CN) ที่ออกรอบนี้ · แสดงให้ทราบ ไม่หักค่าคอม</h3>
+              <h3 className="font-semibold">ใบลดหนี้ (CN) ที่ออกรอบนี้</h3>
+              <p className="text-xs text-muted-foreground">ส่วนที่ไม่ได้ตัดกับใบแจ้งหนี้ภายในรอบ (ค้างเป็นเครดิต / คืนเงิน) หักออกจากยอดเก็บและค่าคอมตามอัตราสินค้า ส่วนที่ตัดกับบิลแล้วไม่หักซ้ำ เพราะบิลนั้นเก็บเงินได้น้อยลงเอง</p>
               <ul className="divide-y divide-border rounded-xl border border-border">
                 {drillCredits.map((c) => (
                   <li key={c.id} className="flex flex-wrap items-center gap-x-3 px-3 py-1.5 text-xs">
                     <span className="font-medium">{c.name}</span><span>{thaiDay(c.date)}</span><span className="flex-1 text-muted-foreground">{c.partnerName}{c.originName ? ` · ลดหนี้บิล ${c.originName}` : ''}</span>
                     <span className="tabular-nums">ก่อน VAT {baht(c.base)}</span>
+                    {c.deductedBase !== undefined && <span className={cn('tabular-nums', c.deductedBase ? 'font-semibold text-destructive' : 'text-muted-foreground')}>{c.deductedBase ? `หัก ${baht(c.deductedBase)}` : 'ตัดกับบิลแล้ว ไม่หัก'}</span>}
                   </li>
                 ))}
               </ul>
@@ -388,13 +397,8 @@ function InvoiceTable({ rows, formulas, lineHref }: { rows: InvoiceCommissionRow
             </TableRow>
             {formulas && <TableRow className={cn('border-b-2', r.kind === 'RETRO' && 'bg-amber-500/5')}>
               <TableCell colSpan={7} className="pt-0 pb-2 whitespace-normal">
-                <ul className="divide-y divide-border/60 rounded-xl border border-border/70 bg-muted/30">
-                  {(formulas.get(r.key) ?? []).map((f, i) => (
-                    <li key={i} className="space-y-1.5 px-3 py-2">
-                      <p className="text-xs font-medium">{f.product}</p>
-                      <Formula formula={f.formula} />
-                    </li>
-                  ))}
+                <ul className="divide-y divide-border/60 rounded-lg border border-border/70 bg-muted/30">
+                  {(formulas.get(r.key) ?? []).map((f, i) => <FormulaLine key={i} product={f.product} formula={f.formula} />)}
                 </ul>
               </TableCell>
             </TableRow>}
@@ -432,6 +436,7 @@ function RunSummary({ results }: { results: RunResults }) {
   const before = sumOf(reps, (r) => r.commissionBeforeTarget ?? r.commission);
   const commission = sumOf(reps, (r) => r.commission);
   const deducted = sumOf(reps, (r) => r.central + r.debtHold);
+  const creditDeduction = sumOf(reps, (r) => r.creditNoteDeduction ?? 0);
   const other = sumOf(reps, (r) => r.adjustments + r.carryIn + r.debtRelease);
   const bonus = sumOf(reps, (r) => (r.tierBonus ?? 0) + (r.newCustomerBonus ?? 0));
   const credits = results.credits ?? [];
@@ -452,6 +457,7 @@ function RunSummary({ results }: { results: RunResults }) {
           {results.notInvoiceGross ? row('เงินเข้าที่ไม่ใช่ค่าบิล (มัดจำ/ปรับปรุง) รวม VAT', results.notInvoiceGross, 'muted', 'ไม่คิดค่าคอม') : null}
           {row('ค่าคอมตามอัตรา', before)}
           {before !== commission && row('ไม่ได้เพราะไม่ถึงเป้า', commission - before, 'bad')}
+          {creditDeduction ? row('หัก ค่าคอมของใบลดหนี้ (CN)', -creditDeduction, 'bad') : null}
           {deducted ? row('หัก ส่วนกลาง / ลูกหนี้ค้างชำระ', -deducted, 'bad') : null}
           {bonus ? row(results.reps.some((r) => isSalesBase(r.bonusBase)) ? `บวก incentive (${BONUS_BASE_LABELS[results.reps.find((r) => isSalesBase(r.bonusBase))!.bonusBase!]}) / ลูกค้าใหม่` : 'บวก incentive (ยอดเก็บ) / ลูกค้าใหม่', bonus, 'good') : null}
           {other ? row('ปรับปรุง / คืนลูกหนี้ / ยกมา', other) : null}
@@ -459,15 +465,16 @@ function RunSummary({ results }: { results: RunResults }) {
         </ul>
       </div>
       <div className="rounded-xl border border-border bg-card p-4 text-sm">
-        <h2 className="mb-1 font-semibold">ใบลดหนี้ (CN) และเงินคืนลูกค้า · แสดงให้ทราบ ไม่หักค่าคอม</h2>
+        <h2 className="mb-1 font-semibold">ใบลดหนี้ (CN) และเงินคืนลูกค้า</h2>
         <ul>
           {row(`CN ที่ออกในรอบนี้ ${credits.length} ใบ`, credits.reduce((sum, c) => sum + c.base, 0))}
+          {row('หักออกจากยอดเก็บก่อนคิดค่าคอม', -credits.reduce((sum, c) => sum + (c.deductedBase ?? 0), 0), 'bad')}
           {credits.some((c) => c.odooUserId === null) && row('CN ที่ไม่มีพนักงานขาย', credits.filter((c) => c.odooUserId === null).reduce((sum, c) => sum + c.base, 0), 'muted')}
           {row(`เงินคืนลูกค้า ${results.refunds?.count ?? 0} รายการ (รวม VAT)`, results.refunds?.amount ?? 0)}
         </ul>
         <p className="mt-2 text-xs text-muted-foreground">
           {results.credits === undefined ? 'ยังไม่มีข้อมูล CN กด “คำนวณ” ใหม่เพื่อดึงจาก Odoo · ' : ''}
-          ค่าคอมคิดจากเงินที่เข้าบัญชีจริง บิลที่ถูกลดด้วย CN จึงมียอดเก็บน้อยลงเอง ไม่ต้องหักซ้ำ ถ้าต้องหักเพิ่มใช้ “รายการปรับยอด” พร้อมเหตุผล
+          CN ส่วนที่ไม่ได้ตัดกับใบแจ้งหนี้ภายในรอบ (ค้างเป็นเครดิต / คืนเงินลูกค้า) หักออกจากยอดเก็บ (ก่อนเทียบเป้า) และหักค่าคอมตามอัตราของสินค้าใน CN ไม่ทำให้ค่าคอมต่ำกว่า 0 · ส่วนที่ตัดกับบิลแล้วไม่หักซ้ำ เพราะบิลนั้นเก็บเงินได้น้อยลงเอง · เครดิตที่หักไปแล้วถ้านำไปตัดบิลในรอบหลัง นับเป็นเงินเข้าของบิลนั้น
         </p>
       </div>
     </section>
@@ -483,13 +490,14 @@ function RepExplain({ rep }: { rep: RepResult }) {
       {excludedBase > 0 && <> ไม่คิด <b className="text-amber-800">{baht(excludedBase)}</b> ({(rep.excluded ?? []).map((e) => `${EXCLUDED_LABELS[e.reason]} ${baht(e.base)}`).join(', ')})</>}
       {' '}ได้ค่าคอมตามอัตรา <b>{baht(rep.commissionBeforeTarget ?? rep.commission)}</b>
       {rep.commissionBeforeTarget !== undefined && rep.commissionBeforeTarget !== rep.commission && <span className="text-destructive"> แต่เป้า {baht(rep.target ?? 0)} ({targetNote(rep) ?? 'ไม่ถึงเป้า'}) จึงได้ {baht(rep.commission)}</span>}
+      {rep.creditNoteDeduction ? <> หัก CN (ยอด {baht(rep.creditNoteDeductedBase ?? 0)}) {baht(rep.creditNoteDeduction)}</> : null}
       {rep.central > 0 && <> หักส่วนกลาง {baht(rep.central)}</>}
       {rep.debtHold > 0 && <> หักลูกหนี้ค้าง {baht(rep.debtHold)}</>}
       {rep.tierBonus ? <> บวก incentive ขั้น {rep.tier?.index}{isSalesBase(rep.bonusBase) ? ` จาก${BONUS_BASE_LABELS[rep.bonusBase!]} ${baht(rep.saleOrderBase ?? 0)} (ไม่ต้องถึงเป้า)` : ''} {baht(rep.tierBonus)}{rep.tier?.salary !== undefined && rep.salary != null ? ` (เงินเดือนขั้น ${baht(rep.tier.salary)} − เงินเดือน ${baht(rep.salary)})` : ''}</> : null}
       {rep.newCustomerBonus ? <> บวกลูกค้าใหม่ {rep.newCustomers?.length} ราย {baht(rep.newCustomerBonus)}</> : null}
       {rep.adjustments !== 0 && <> ปรับ {baht(rep.adjustments)}</>}
       {' '}จ่ายจริง <b>{baht(rep.payable)}</b>
-      {rep.creditNoteCount ? <span className="text-muted-foreground"> · CN รอบนี้ {rep.creditNoteCount} ใบ {baht(rep.creditNoteBase ?? 0)} (ไม่หัก)</span> : null}
+      {rep.creditNoteCount ? <span className="text-muted-foreground"> · CN รอบนี้ {rep.creditNoteCount} ใบ {baht(rep.creditNoteBase ?? 0)}</span> : null}
     </p>
   );
 }
@@ -543,6 +551,35 @@ function PeriodDatesCard({ calendar, period, hidden, canEdit, endLocked }: { cal
         {endLocked && ' · รอบอนุมัติแล้ว แก้ได้เฉพาะวันจ่าย'}
       </p>
     </details>
+  );
+}
+
+/**
+ * One product line's commission on a single text line, for the per-invoice view (short when printed):
+ * product · rate rule · 451,000.00 (ยอดรวม VAT) × 0.6% × 110% (เกินดิว …) = 2,976.60.
+ */
+function FormulaLine({ product, formula }: { product: string; formula: LineFormula }) {
+  const tone = { up: 'text-emerald-700', down: 'text-red-700' } as const;
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-3 py-1 text-xs print:py-0.5">
+      <span className="font-medium">{product}</span>
+      <span className="text-muted-foreground">{formula.rule}</span>
+      <span className="ml-auto tabular-nums">
+        {formula.terms ? (
+          <>
+            {formula.terms.map((t, i) => (
+              <Fragment key={i}>
+                {i > 0 && ' × '}
+                <span className={cn(t.tone && tone[t.tone])}>{t.value}</span>
+                {t.label !== 'อัตรา' && <span className="text-muted-foreground"> ({t.label})</span>}
+              </Fragment>
+            ))}
+            {' = '}<b>{formula.result}</b>
+          </>
+        ) : formula.steps}
+      </span>
+      {formula.excluded && <span className="rounded bg-amber-500/15 px-1 font-medium text-amber-800">ไม่คิด: {formula.excluded}</span>}
+    </li>
   );
 }
 
