@@ -272,6 +272,26 @@ export type InvoiceSettlement = { partialId: number; invoiceId: number; amount: 
 export type DeferredInvoice = { invoiceId: number; invoiceName: string; partnerName: string; amountTotal: number; settled: number; cashThisPeriod: number };
 
 /**
+ * A customer invoice or credit note Odoo shows on a receipt (same full reconciliation) that the
+ * receipt's cash did not pay, e.g. an invoice closed only by credit notes. Shown for reference; no commission.
+ */
+export type LinkedDoc = {
+  receiptKey: string;
+  receiptName: string;
+  cashDate: string;
+  partnerName: string;
+  moveId: number;
+  name: string;
+  /** `out_invoice` or `out_refund`. */
+  moveType: string;
+  invoiceDate: string | null;
+  amountTotal: number;
+  amountUntaxed: number;
+  /** The other documents it was set against, with the amount (with VAT). */
+  settledBy: { name: string; amount: number }[];
+};
+
+/**
  * Invoices are counted only in the period they become fully paid (everything reconciled with them,
  * cash or credit note, by the period end covers the total). Returns the invoices to defer, and for
  * invoices completed in this period the cash settled in earlier periods (which was deferred then)

@@ -360,13 +360,19 @@ export async function listFreightDiscounts(): Promise<FreightDiscounts> {
   return (await getAdminSnapshot()).freightDiscounts;
 }
 
-/** Replaces the freight discount rates of one delivery method; no valid rate left removes it. Returns what was saved. */
-export function setFreightRates(carrierId: number, rates: FreightRates): Promise<FreightRates> {
+/**
+ * Replaces the freight discount rates of one or more delivery methods (same rates for each, in one write);
+ * no valid rate left removes them. Returns what was saved.
+ */
+export function setFreightRates(carrierIds: number | number[], rates: FreightRates): Promise<FreightRates> {
+  const ids = [...new Set(Array.isArray(carrierIds) ? carrierIds : [carrierIds])].filter((id) => Number.isInteger(id) && id > 0);
   return mutate((data) => {
     const clean = cleanFreightRates(rates);
     const next = { ...data.freightDiscounts };
-    if (Object.keys(clean).length) next[String(carrierId)] = clean;
-    else delete next[String(carrierId)];
+    for (const id of ids) {
+      if (Object.keys(clean).length) next[String(id)] = { ...clean };
+      else delete next[String(id)];
+    }
     data.freightDiscounts = next;
     return clean;
   });

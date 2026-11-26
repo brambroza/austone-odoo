@@ -168,9 +168,34 @@ describe('fetchCollections', () => {
     expect(result.deferred).toEqual([{ invoiceId: 100, invoiceName: 'INV/0001', partnerName: 'ร้านยางดี', amountTotal: 107_000, settled: 53_500, cashThisPeriod: 53_500 }]);
   });
 
+  it('lists documents of the receipt\'s full reconciliation that its cash did not pay, for reference', async () => {
+    // PBNK1 pays INV/0001; INV/0003 is closed by credit note RINV/0009 in the same full reconciliation (Odoo shows all on PBNK1).
+    const data = {
+      ...base,
+      'account.move.line': [
+        ...base['account.move.line'].map((l) => (l.id === 900 || l.id === 2 ? { ...l, full_reconcile_id: [5, 'F5'] } : l)),
+        { id: 903, move_id: [103, 'INV3'], account_type: 'asset_receivable', full_reconcile_id: [5, 'F5'], matched_debit_ids: [], matched_credit_ids: [80] },
+        { id: 904, move_id: [104, 'CN9'], account_type: 'asset_receivable', full_reconcile_id: [5, 'F5'], matched_debit_ids: [80], matched_credit_ids: [] },
+      ],
+      'account.partial.reconcile': [...base['account.partial.reconcile'], { id: 80, debit_move_id: [903, 'x'], credit_move_id: [904, 'x'], amount: 2_500 }],
+      'account.move': [
+        ...base['account.move'],
+        { id: 103, name: 'INV/0003', move_type: 'out_invoice', state: 'posted', invoice_date: '2026-10-01', amount_total: 2_500, amount_untaxed: 2_336.45 },
+        { id: 104, name: 'RINV/0009', move_type: 'out_refund', state: 'posted', invoice_date: '2026-10-03', amount_total: 2_500, amount_untaxed: 2_336.45 },
+      ],
+    };
+    const result = await fetchCollections(fakeClient(data), '2026-10', { start: '2026-09-21', end: '2026-10-20' });
+    expect(result.linked).toEqual([
+      { receiptKey: 'P1', receiptName: 'PBNK1', cashDate: '2026-10-08', partnerName: 'ร้านยางดี', moveId: 103, name: 'INV/0003', moveType: 'out_invoice', invoiceDate: '2026-10-01', amountTotal: 2_500, amountUntaxed: 2_336.45, settledBy: [{ name: 'RINV/0009', amount: 2_500 }] },
+      { receiptKey: 'P1', receiptName: 'PBNK1', cashDate: '2026-10-08', partnerName: 'ร้านยางดี', moveId: 104, name: 'RINV/0009', moveType: 'out_refund', invoiceDate: '2026-10-03', amountTotal: 2_500, amountUntaxed: 2_336.45, settledBy: [{ name: 'INV/0003', amount: 2_500 }] },
+    ]);
+    // Reference only: no commission lines for them.
+    expect(result.lines.some((l) => l.invoiceName === 'INV/0003' || l.invoiceName === 'RINV/0009')).toBe(false);
+  });
+
   it('returns nothing for an empty period without extra reads', async () => {
     const client = fakeClient({});
-    expect(await fetchCollections(client, '2026-10', { start: '2026-09-21', end: '2026-10-20' })).toEqual({ lines: [], receipts: 0, refunds: { count: 0, amount: 0 }, deferred: [] });
+    expect(await fetchCollections(client, '2026-10', { start: '2026-09-21', end: '2026-10-20' })).toEqual({ lines: [], receipts: 0, refunds: { count: 0, amount: 0 }, deferred: [], linked: [] });
     expect(client.calls.every((c) => c.endsWith('search_read'))).toBe(true);
   });
 

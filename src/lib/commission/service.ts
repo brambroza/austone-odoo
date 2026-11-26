@@ -11,6 +11,7 @@ import { blockingIssues, calculateRun } from './calc';
 import { isTagRep, retroDiff } from './ledger';
 import { fetchCollections, fetchCredits, type CreditNoteRule, fetchFirstInvoices, fetchOverdueInvoices, fetchPaidInvoiceIds, fetchInvoiceSales, fetchRepDirectory, fetchSaleOrders } from './odoo';
 import { calendarOf, periodContaining, periodDates, shiftPeriod, type PeriodCalendar } from './period';
+import { CALCULATE_STEPS, progressReporter, SYNC_STEPS, type ProgressReporter } from './progress';
 import * as repo from './repo';
 import { planDebt, statementSettings } from './statement';
 import { isSalesBase, type CommissionRun, type CommissionSource, type DebtHold, type LedgerLine, type RunSnapshot } from './types';
@@ -133,13 +134,20 @@ export async function targetReps(source: CommissionSource, period: string): Prom
   return { reps, odooError };
 }
 
-export async function syncPeriod(source: CommissionSource, period: string): Promise<SyncResult> {
+/** Progress reporter for a run, writing to `CommissionRun.progress` (nothing without a token). */
+const reporterFor = (runId: string, token: string | null | undefined, op: 'sync' | 'calculate'): ProgressReporter =>
+  progressReporter(token ?? null, op, op === 'sync' ? SYNC_STEPS : CALCULATE_STEPS, (p) => repo.saveProgress(runId, p));
+
+/** `progressToken`: from the clicked form, so the button can show this pull's progress (see `progress.ts`). */
+export async function syncPeriod(source: CommissionSource, period: string, progressToken?: string | null): Promise<SyncResult> {
   const run = await repo.ensureRun(source.id, period);
   if (LOCKED.includes(run.status)) return { ok: false, reason: 'รอบนี้อนุมัติแล้ว ดึงข้อมูลใหม่ไม่ได้ (การเปลี่ยนแปลงใน Odoo จะถูกปรับปรุงในรอบถัดไป)' };
+  const progress = reporterFor(run.id, progressToken, 'sync');
   const client = clientFor(source);
   const rule = await creditNoteRule(source);
-  const fetched = await fetchCollections(client, period, await rangeOf(source, period), rule);
+  const fetched = await fetchCollections(client, period, await rangeOf(source, period), rule, progress);
 
+  await progress(SYNC_STEPS[6]);
   const previous = shiftPeriod(period, -1);
   const previousRun = await repo.getRun(source.id, previous);
   let retro: ReturnType<typeof retroDiff> = [];
@@ -149,13 +157,16 @@ export async function syncPeriod(source: CommissionSource, period: string): Prom
     retro = retroDiff(booked, fresh.lines, previous);
   }
 
+  await progress(SYNC_STEPS[7]);
   const debt = await planPeriodDebt(source, period, client, fetched.lines);
   const newCustomers = await planPeriodNewCustomers(source, period, client, fetched.lines);
   // Sale orders only when the incentive is measured on them, so other companies pull exactly as before.
+  await progress(SYNC_STEPS[8]);
   const bonusBase = bonusSettings(source).bonusBase;
   const saleOrders = bonusBase === 'SALE_ORDER' ? await fetchSaleOrders(client, period, await rangeOf(source, period))
     : bonusBase === 'INVOICE' ? await fetchInvoiceSales(client, period, await rangeOf(source, period)) : null;
 
+  await progress(SYNC_STEPS[9]);
   // Lock check again right before writing: someone may have approved while Odoo was being read.
   const latest = await repo.getRun(source.id, period);
   if (!latest || LOCKED.includes(latest.status)) return { ok: false, reason: 'รอบนี้ถูกอนุมัติระหว่างดึงข้อมูล จึงไม่บันทึก' };
@@ -166,6 +177,7 @@ export async function syncPeriod(source: CommissionSource, period: string): Prom
   await repo.replaceNewCustomers(source.id, period, newCustomers);
   if (saleOrders) await repo.replaceSaleOrders(source.id, period, saleOrders);
   await repo.saveDeferred(latest.id, fetched.deferred ?? []);
+  await repo.saveLinkedDocs(latest.id, fetched.linked ?? []);
   await repo.updateRun(latest.id, OPEN, { status: 'DRAFT', syncedAt: new Date(), calculatedAt: null, results: null, snapshot: null, totalPayable: 0, submittedById: null, submittedAt: null });
   return {
     ok: true, lines: fetched.lines.length, receipts: fetched.receipts, retro: retro.length, refunds: fetched.refunds, held: debt.holds.length, released: debt.releaseIds.length,
@@ -241,22 +253,27 @@ async function carryInFor(sourceId: string, period: string): Promise<Map<number,
 export type RunResult = { ok: true; run: CommissionRun } | { ok: false; reason: string };
 
 /** Calculates (or recalculates) a draft run from the stored ledger and the current rules. */
-export async function calculatePeriod(source: CommissionSource, period: string): Promise<RunResult> {
+export async function calculatePeriod(source: CommissionSource, period: string, progressToken?: string | null): Promise<RunResult> {
   const run = await repo.ensureRun(source.id, period);
   if (run.status !== 'DRAFT') return { ok: false, reason: 'คำนวณใหม่ได้เฉพาะรอบที่เป็นร่าง (ถ้าส่งอนุมัติแล้ว ให้ตีกลับก่อน)' };
   if (!run.syncedAt) return { ok: false, reason: 'ดึงข้อมูลจาก Odoo ก่อนคำนวณ' };
+  const progress = reporterFor(run.id, progressToken, 'calculate');
+  await progress(CALCULATE_STEPS[0]);
   const [ledger, snapshot, reps, carryIn] = await Promise.all([repo.listLedger(source.id, period), loadSnapshot(source, run), repo.listReps(source.id), carryInFor(source.id, period)]);
   const inactive = new Set(reps.filter((r) => !r.active).map((r) => r.odooUserId));
   // Credit notes are read live: their uncredited part is deducted before commission. If Odoo cannot be
   // read the run still calculates, without deducting, with a note (calculate again to deduct).
   let creditError: string | null = null;
+  await progress(CALCULATE_STEPS[1]);
   const credits = await fetchCredits(clientFor(source), await rangeOf(source, period), period).catch((error: unknown) => {
     creditError = error instanceof Error ? error.message : String(error);
     return null;
   });
   if (credits) Object.assign(snapshot, { credits: credits.credits, refunds: credits.refunds, creditLines: credits.lines });
+  await progress(CALCULATE_STEPS[2]);
   const results = calculateRun({ lines: ledger, ...snapshot, reps, inactive, carryIn, period });
   if (creditError) results.issues.push({ message: `ดึงใบลดหนี้ (CN) จาก Odoo ไม่ได้ จึงยังไม่ได้หักยอด CN (กดคำนวณใหม่อีกครั้ง): ${creditError}` });
+  await progress(CALCULATE_STEPS[3]);
   const moved = await repo.updateRun(run.id, ['DRAFT'], { calculatedAt: new Date(), results, snapshot, totalPayable: results.totalPayable });
   if (!moved) return { ok: false, reason: 'สถานะรอบเปลี่ยนระหว่างคำนวณ ลองใหม่' };
   return { ok: true, run: (await repo.getRun(source.id, period))! };

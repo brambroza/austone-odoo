@@ -3,6 +3,7 @@
  * against the bank), and sales / collections per rep × price group × product family.
  */
 import { excludedReasonOf } from './calc';
+import type { LinkedDoc } from './ledger';
 import type { CommissionPricelist, LedgerLine, LineResult, PriceGroup } from './types';
 
 const round2 = (v: number) => Math.round((v + Number.EPSILON * Math.sign(v)) * 100) / 100;
@@ -50,6 +51,42 @@ export function groupByInvoice(lines: readonly LedgerLine[]): InvoiceRow[] {
   }
   return [...map.values()].map((r) => ({ ...r, base: round2(r.base), gross: round2(r.gross) }))
     .sort((a, b) => a.cashDate.localeCompare(b.cashDate) || a.receiptName.localeCompare(b.receiptName));
+}
+
+/** A reference row under a receipt: a document Odoo shows on it that its cash did not pay (no commission). */
+export type LinkedRow = { key: string; linked: true; doc: LinkedDoc; countedIn: string[] };
+
+/**
+ * Puts each receipt's reference documents (`LinkedDoc`) right after the last row that names that
+ * receipt (`receiptsOf`), so a receipt lists every document Odoo shows on it. Only receipts present
+ * in `rows` get theirs (filters apply). `countedIn(doc)`: other receipts whose cash paid the same invoice.
+ */
+export function insertLinkedDocs<T>(rows: readonly T[], receiptsOf: (row: T) => readonly string[], linked: readonly LinkedDoc[], countedIn: (doc: LinkedDoc) => string[]): (T | LinkedRow)[] {
+  const byReceipt = new Map<string, LinkedDoc[]>();
+  for (const d of linked) byReceipt.set(d.receiptName, [...(byReceipt.get(d.receiptName) ?? []), d]);
+  const lastIndex = new Map<string, number>();
+  rows.forEach((r, i) => { for (const name of receiptsOf(r)) lastIndex.set(name, i); });
+  const out: (T | LinkedRow)[] = [];
+  const done = new Set<string>();
+  rows.forEach((r, i) => {
+    out.push(r);
+    for (const name of receiptsOf(r)) {
+      if (lastIndex.get(name) !== i || done.has(name)) continue;
+      done.add(name);
+      for (const doc of byReceipt.get(name) ?? []) out.push({ key: `LINK:${doc.receiptKey}:${doc.moveId}`, linked: true, doc, countedIn: countedIn(doc) });
+    }
+  });
+  return out;
+}
+
+/** Other receipts in `rows` whose cash paid `doc` (an invoice also paid elsewhere earns its commission there). */
+export function receiptsPaying(rows: readonly { receiptName: string; invoiceName: string | null }[], doc: LinkedDoc): string[] {
+  return [...new Set(rows.filter((x) => x.invoiceName === doc.name && x.receiptName !== doc.receiptName).map((x) => x.receiptName))];
+}
+
+/** `insertLinkedDocs` for the collections page (one row per receipt × invoice). */
+export function withLinkedDocs(rows: readonly InvoiceRow[], linked: readonly LinkedDoc[], all: readonly InvoiceRow[] = rows): (InvoiceRow | LinkedRow)[] {
+  return insertLinkedDocs(rows, (r) => [r.receiptName], linked, (doc) => receiptsPaying(all, doc));
 }
 
 export type InvoiceCommissionRow = {

@@ -4,7 +4,7 @@ import type { CommissionRun, CommissionSource, LedgerLine } from '../types';
 const repo = vi.hoisted(() => ({
   ensureRun: vi.fn(), getRun: vi.fn(), updateRun: vi.fn(), listBookedFor: vi.fn(), replaceLedger: vi.fn(), listLedger: vi.fn(), listRates: vi.fn(), listSteps: vi.fn(),
   listPricelists: vi.fn(), listTargets: vi.fn(), listSalaries: vi.fn(), listAdjustments: vi.fn(), listReps: vi.fn(), listDebtHolds: vi.fn(), applyDebtPlan: vi.fn(), listPeriodOverrides: vi.fn(),
-  listNewCustomers: vi.fn(), replaceNewCustomers: vi.fn(), upsertReps: vi.fn(), listSaleOrders: vi.fn(), replaceSaleOrders: vi.fn(), saveDeferred: vi.fn(), creditNoteHistory: vi.fn(),
+  listNewCustomers: vi.fn(), replaceNewCustomers: vi.fn(), upsertReps: vi.fn(), listSaleOrders: vi.fn(), replaceSaleOrders: vi.fn(), saveDeferred: vi.fn(), saveLinkedDocs: vi.fn(), saveProgress: vi.fn(), creditNoteHistory: vi.fn(),
 }));
 const odoo = vi.hoisted(() => ({ fetchCollections: vi.fn(), fetchCredits: vi.fn(), fetchOverdueInvoices: vi.fn(), fetchPaidInvoiceIds: vi.fn(), fetchFirstInvoices: vi.fn(), fetchRepDirectory: vi.fn(), fetchSaleOrders: vi.fn() }));
 vi.mock('../repo', () => repo);
@@ -67,7 +67,7 @@ describe('overdue-invoice holds on sync', () => {
     repo.listPeriodOverrides.mockResolvedValue([{ period: '2026-09', endDate: '2026-09-25', payDate: null }, { period: '2026-10', endDate: '2026-10-22', payDate: null }]);
     odoo.fetchCollections.mockResolvedValue({ lines: [], receipts: 0, refunds: { count: 0, amount: 0 } });
     await service.syncPeriod(source, '2026-10');
-    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-10', { start: '2026-09-26', end: '2026-10-22' }, expect.objectContaining({ deducted: expect.any(Function) }));
+    expect(odoo.fetchCollections).toHaveBeenCalledWith(expect.anything(), '2026-10', { start: '2026-09-26', end: '2026-10-22' }, expect.objectContaining({ deducted: expect.any(Function) }), expect.any(Function));
   });
 
   it('skips the overdue read when the company does not hold debts', async () => {
@@ -153,6 +153,27 @@ describe('calculatePeriod', () => {
     repo.updateRun.mockClear();
     expect(await service.calculatePeriod(source, '2026-10')).toMatchObject({ ok: true });
     expect(repo.updateRun.mock.calls[0][2].results.issues).toContainEqual({ message: expect.stringContaining('ดึงใบลดหนี้ (CN)') });
+  });
+});
+
+describe('progress', () => {
+  it('stores each step of a pull and a calculation under the click\'s token, and nothing without one', async () => {
+    repo.ensureRun.mockResolvedValue(runRow({ syncedAt: new Date(0) }));
+    repo.getRun.mockImplementation(async (_s: string, period: string) => (period === '2026-10' ? runRow({ syncedAt: new Date(0) }) : null));
+    odoo.fetchCollections.mockResolvedValue({ lines: [], receipts: 0, refunds: { count: 0, amount: 0 } });
+    await service.syncPeriod(source, '2026-10', 'click-12345678');
+    const syncSteps = repo.saveProgress.mock.calls.map(([runId, p]) => [runId, p.token, p.op, p.step]);
+    expect(syncSteps).toEqual([['run1', 'click-12345678', 'sync', 7], ['run1', 'click-12345678', 'sync', 8], ['run1', 'click-12345678', 'sync', 9], ['run1', 'click-12345678', 'sync', 10]]);
+    // fetchCollections reports its own first steps through the reporter it is given.
+    expect(odoo.fetchCollections.mock.calls[0][4]).toEqual(expect.any(Function));
+
+    repo.saveProgress.mockClear();
+    await service.calculatePeriod(source, '2026-10', 'click-87654321');
+    expect(repo.saveProgress.mock.calls.map(([, p]) => `${p.op}:${p.step}/${p.total}`)).toEqual(['calculate:1/4', 'calculate:2/4', 'calculate:3/4', 'calculate:4/4']);
+
+    repo.saveProgress.mockClear();
+    await service.calculatePeriod(source, '2026-10');
+    expect(repo.saveProgress).not.toHaveBeenCalled();
   });
 });
 

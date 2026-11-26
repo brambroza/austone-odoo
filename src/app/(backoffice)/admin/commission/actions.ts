@@ -14,6 +14,7 @@ import { statementSettings } from '@/lib/commission/statement';
 import * as repo from '@/lib/commission/repo';
 import * as service from '@/lib/commission/service';
 import { normalizeTargetSteps, targetSettings } from '@/lib/commission/target-mode';
+import { progressToken } from '@/lib/commission/progress';
 import { parseTargetLines } from '@/lib/commission/targets';
 import { TARGET_MODES, type BonusBase, type BonusTier, type CommissionSource, type PriceGroup, type SummaryLine, type TargetMode, type TargetStep } from '@/lib/commission/types';
 import { probeOdooConnection } from '@/lib/odoo/rpc';
@@ -614,7 +615,7 @@ export async function syncPeriodAction(formData: FormData) {
   const path = field(formData, 'returnTo') === 'collections' ? `${BASE}/collections` : runPath(formData);
   const source = await sourceOf(path, formData);
   const period = periodOf(path, formData);
-  const result: service.SyncResult = await service.syncPeriod(source, period)
+  const result: service.SyncResult = await service.syncPeriod(source, period, progressToken(formData.get('progressToken')))
     .catch((error: unknown) => ({ ok: false as const, reason: `ดึงข้อมูลจาก Odoo ไม่สำเร็จ: ${errorText(error)}` }));
   if (!result.ok) fail(path, formData, result.reason);
   const ok = result as Extract<service.SyncResult, { ok: true }>;
@@ -631,7 +632,7 @@ export async function calculateAction(formData: FormData) {
   const actor = await requirePermission('commission.run');
   const path = runPath(formData);
   const source = await sourceOf(path, formData);
-  const result = await service.calculatePeriod(source, periodOf(path, formData));
+  const result = await service.calculatePeriod(source, periodOf(path, formData), progressToken(formData.get('progressToken')));
   if (!result.ok) fail(path, formData, result.reason);
   const run = (result as Extract<typeof result, { ok: true }>).run;
   await audit(actor.id, 'commission.calculate', 'CommissionRun', run.id, { totalPayable: run.totalPayable, issues: run.results?.issues.length ?? 0 });

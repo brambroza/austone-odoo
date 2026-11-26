@@ -13,9 +13,10 @@ import type { OdooReadClient } from '@/lib/odoo/rpc';
 import type { FirstInvoice } from './bonus';
 import {
   buildLedger, lastCategorySegment, ownerOf, planFullPayment, repTagName, tagRepKey, withFinalCashDate,
-  type DeferredInvoice, type InvoiceSettlement, type LedgerInput, type RawInvoice, type RawInvoiceLine, type RawPartial, type RawReceipt,
+  type DeferredInvoice, type InvoiceSettlement, type LinkedDoc, type LedgerInput, type RawInvoice, type RawInvoiceLine, type RawPartial, type RawReceipt,
 } from './ledger';
 import { addDays } from './period';
+import { noProgress, SYNC_STEPS, type ProgressReporter } from './progress';
 import type { OpenInvoice } from './statement';
 import type { CreditNote, LedgerLine, SaleOrder } from './types';
 
@@ -147,7 +148,7 @@ async function readInvoiceContext(client: OdooReadClient, invoiceIds: number[]) 
   };
 }
 
-export type CollectionFetch = { lines: LedgerLine[]; receipts: number; refunds: { count: number; amount: number }; deferred?: DeferredInvoice[] };
+export type CollectionFetch = { lines: LedgerLine[]; receipts: number; refunds: { count: number; amount: number }; deferred?: DeferredInvoice[]; linked?: LinkedDoc[] };
 
 /**
  * Which credit notes are deducted in their own period (`fetchCredits`), and that period's last day.
@@ -156,8 +157,9 @@ export type CollectionFetch = { lines: LedgerLine[]; receipts: number; refunds: 
  */
 export type CreditNoteRule = { deducted: (note: { id: number; date: string }) => boolean; periodEndOf: (date: string) => string };
 
-/** Cash received between `start` and `end` (inclusive), split to invoice lines for `period`. */
-export async function fetchCollections(client: OdooReadClient, period: string, range: { start: string; end: string }, creditRule?: CreditNoteRule): Promise<CollectionFetch> {
+/** Cash received between `start` and `end` (inclusive), split to invoice lines for `period`. `progress` hears each stage (`SYNC_STEPS`). */
+export async function fetchCollections(client: OdooReadClient, period: string, range: { start: string; end: string }, creditRule?: CreditNoteRule, progress: ProgressReporter = noProgress): Promise<CollectionFetch> {
+  await progress(SYNC_STEPS[0]);
   const payments = await searchAll<PaymentRow>(client, 'account.payment', [
     ['payment_type', '=', 'inbound'], ['partner_type', '=', 'customer'], ['state', 'in', ['paid', 'reconciled']], ['is_matched', '=', true],
     ['date', '>=', addDays(range.start, -CLEARING_LOOKBACK_DAYS)], ['date', '<=', range.end],
@@ -178,6 +180,7 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
     const move = ref(s.move_id);
     if (move && !receiptByMove.has(move[0])) receiptByMove.set(move[0], { key: `S${s.id}`, name: s.payment_ref || move[1], date: s.date, partnerName: ref(s.partner_id)?.[1] ?? '', kind: 'statement' });
   }
+  await progress(SYNC_STEPS[1]);
   const moveLines = receiptByMove.size ? await searchIn<MoveLineRow>(client, 'account.move.line', 'move_id', [...receiptByMove.keys()], [],
     ['id', 'move_id', 'account_type', 'matched_debit_ids', 'matched_credit_ids']) : [];
 
@@ -209,6 +212,7 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
   }
   const kept = new Set(receipts.map((r) => r.key));
 
+  await progress(SYNC_STEPS[2]);
   const partialOwner = new Map<number, string>();
   for (const r of receivable) if (kept.has(r.key)) for (const id of r.partialIds) partialOwner.set(id, r.key);
   const partialRows = partialOwner.size ? await readAll<PartialRow>(client, 'account.partial.reconcile', [...partialOwner.keys()], ['id', 'debit_move_id', 'amount']) : [];
@@ -216,10 +220,14 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
     const debit = ref(p.debit_move_id);
     return debit ? [{ id: p.id, receiptKey: partialOwner.get(p.id)!, debitLineId: debit[0], amount: Number(p.amount) || 0 }] : [];
   });
-  const debitLines = partials.length ? await readAll<{ id: number; move_id: M2O }>(client, 'account.move.line', partials.map((p) => p.debitLineId), ['move_id']) : [];
+  const debitLines = partials.length ? await readAll<{ id: number; move_id: M2O; full_reconcile_id?: M2O }>(client, 'account.move.line', partials.map((p) => p.debitLineId), ['move_id', 'full_reconcile_id']) : [];
   const debitLineMove = new Map(debitLines.flatMap((l) => (ref(l.move_id) ? [[l.id, ref(l.move_id)![0]] as [number, number]] : [])));
+  await progress(SYNC_STEPS[3]);
+  const linked = await fetchLinkedDocs(client, receipts, partials, debitLines);
+  await progress(SYNC_STEPS[4]);
   const context = await readInvoiceContext(client, [...new Set(debitLineMove.values())]);
   const invoices = new Map([...context.invoices].filter(([, i]) => i.moveType === 'out_invoice'));
+  await progress(SYNC_STEPS[5]);
 
   // Count an invoice only in the period it becomes fully paid (decided with the client 2026-11-10).
   const full = await fullPaymentOf(client, range, invoices, partials, debitLineMove, creditRule);
@@ -238,7 +246,79 @@ export async function fetchCollections(client: OdooReadClient, period: string, r
     receipts: receipts.length,
     refunds: { count: refunds.length, amount: refunds.reduce((s, r) => s + (Number(r.amount) || 0), 0) },
     deferred: full.deferredList,
+    linked,
   };
+}
+
+/**
+ * Odoo lists on a receipt every document of the reconciliation it belongs to (`account.full.reconcile`),
+ * including invoices closed only by credit notes and the credit notes themselves. Those carry no cash
+ * from the receipt, so they earn no commission, but the collections page shows them so the receipt
+ * matches what accounting sees in Odoo. Returns, per kept receipt, the customer invoices / credit notes
+ * of the full reconciliations its cash touched that the receipt did not pay itself, each with what it
+ * was set against. Partly paid invoices (no full reconciliation yet) bring nothing.
+ */
+async function fetchLinkedDocs(client: OdooReadClient, receipts: readonly RawReceipt[], partials: readonly RawPartial[], debitLines: readonly { id: number; move_id: M2O; full_reconcile_id?: M2O }[]): Promise<LinkedDoc[]> {
+  const lineInfo = new Map(debitLines.map((l) => [l.id, { move: ref(l.move_id)?.[0], full: ref(l.full_reconcile_id ?? false)?.[0] }]));
+  const byReceipt = new Map<string, { fulls: Set<number>; paid: Set<number> }>();
+  for (const p of partials) {
+    const info = lineInfo.get(p.debitLineId);
+    const entry = byReceipt.get(p.receiptKey) ?? { fulls: new Set<number>(), paid: new Set<number>() };
+    if (info?.move !== undefined) entry.paid.add(info.move);
+    if (info?.full !== undefined) entry.fulls.add(info.full);
+    byReceipt.set(p.receiptKey, entry);
+  }
+  const fullIds = [...new Set([...byReceipt.values()].flatMap((e) => [...e.fulls]))];
+  if (!fullIds.length) return [];
+
+  const groupLines = await searchIn<{ id: number; move_id: M2O; full_reconcile_id: M2O; matched_debit_ids: number[]; matched_credit_ids: number[] }>(client, 'account.move.line', 'full_reconcile_id', fullIds, [],
+    ['id', 'move_id', 'full_reconcile_id', 'matched_debit_ids', 'matched_credit_ids']);
+  const moveOfLine = new Map(groupLines.flatMap((l) => (ref(l.move_id) ? [[l.id, ref(l.move_id)![0]] as [number, number]] : [])));
+  const moves = await readAll<{ id: number; name: string; move_type: string; state: string; invoice_date: string | false; amount_total: number; amount_untaxed: number }>(client, 'account.move', [...new Set(moveOfLine.values())],
+    ['name', 'move_type', 'state', 'invoice_date', 'amount_total', 'amount_untaxed']);
+  const moveById = new Map(moves.map((m) => [m.id, m]));
+  const partialIds = [...new Set(groupLines.flatMap((l) => [...(l.matched_debit_ids || []), ...(l.matched_credit_ids || [])]))];
+  const groupPartials = partialIds.length ? await readAll<{ id: number; amount: number; debit_move_id: M2O; credit_move_id: M2O }>(client, 'account.partial.reconcile', partialIds, ['amount', 'debit_move_id', 'credit_move_id']) : [];
+
+  // Per document: the other moves it was set against, with the amount.
+  const settledBy = new Map<number, Map<number, number>>();
+  const add = (moveId: number, other: number, amount: number) => {
+    const map = settledBy.get(moveId) ?? new Map<number, number>();
+    map.set(other, (map.get(other) ?? 0) + amount);
+    settledBy.set(moveId, map);
+  };
+  for (const p of groupPartials) {
+    const debit = moveOfLine.get(ref(p.debit_move_id)?.[0] ?? -1);
+    const credit = moveOfLine.get(ref(p.credit_move_id)?.[0] ?? -1);
+    if (debit === undefined || credit === undefined || debit === credit) continue;
+    add(debit, credit, Number(p.amount) || 0);
+    add(credit, debit, Number(p.amount) || 0);
+  }
+  const fullOfMove = new Map<number, Set<number>>();
+  for (const l of groupLines) {
+    const move = ref(l.move_id)?.[0];
+    const full = ref(l.full_reconcile_id)?.[0];
+    if (move === undefined || full === undefined) continue;
+    fullOfMove.set(move, (fullOfMove.get(move) ?? new Set()).add(full));
+  }
+
+  const out: LinkedDoc[] = [];
+  for (const receipt of receipts) {
+    const entry = byReceipt.get(receipt.key);
+    if (!entry?.fulls.size) continue;
+    const docs = [...fullOfMove].filter(([move, fulls]) => !entry.paid.has(move) && [...fulls].some((f) => entry.fulls.has(f))).map(([move]) => moveById.get(move))
+      .filter((m): m is NonNullable<typeof m> => Boolean(m) && m!.state === 'posted' && (m!.move_type === 'out_invoice' || m!.move_type === 'out_refund'))
+      .sort((a, b) => a.move_type.localeCompare(b.move_type) || a.name.localeCompare(b.name));
+    for (const m of docs) {
+      out.push({
+        receiptKey: receipt.key, receiptName: receipt.name, cashDate: receipt.cashDate, partnerName: receipt.partnerName,
+        moveId: m.id, name: m.name, moveType: m.move_type, invoiceDate: date(m.invoice_date),
+        amountTotal: Math.abs(Number(m.amount_total) || 0), amountUntaxed: Math.abs(Number(m.amount_untaxed) || 0),
+        settledBy: [...(settledBy.get(m.id) ?? [])].map(([other, amount]) => ({ name: moveById.get(other)?.name ?? `#${other}`, amount: Math.round(amount * 100) / 100 })),
+      });
+    }
+  }
+  return out;
 }
 
 /**

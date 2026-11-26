@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { byRepAndGroup, commissionByInvoice, groupByInvoice, totalsByRep } from '../report';
+import { byRepAndGroup, commissionByInvoice, groupByInvoice, totalsByRep, insertLinkedDocs, withLinkedDocs, type InvoiceRow } from '../report';
+import type { LinkedDoc } from '../ledger';
 import { parseTargetLines } from '../targets';
 import type { CommissionPricelist, LedgerLine } from '../types';
 
@@ -68,5 +69,33 @@ describe('parseTargetLines', () => {
     const r = parseTargetLines('x\t1\nสมชาย ใจดี\tabc\nสมหญิง\t-5\nonlyname', reps);
     expect(r.errors).toHaveLength(4);
     expect(r.values.size).toBe(0);
+  });
+});
+
+describe('withLinkedDocs', () => {
+  const row = (receiptName: string, invoiceName: string): InvoiceRow => ({
+    key: `${receiptName}:${invoiceName}`, kind: 'COLLECTION', cashDate: '2026-08-10', receiptName, partnerName: 'ร้าน', invoiceName, invoiceDate: null, dueDate: null,
+    overdueDays: 0, repName: null, odooUserId: null, pricelists: [], families: [], base: 1, gross: 1, lines: 1, issues: [],
+  });
+  const doc = (receiptName: string, name: string, moveId: number): LinkedDoc => ({
+    receiptKey: receiptName, receiptName, cashDate: '2026-08-10', partnerName: 'ร้าน', moveId, name, moveType: 'out_invoice', invoiceDate: null, amountTotal: 10, amountUntaxed: 9, settledBy: [],
+  });
+
+  it('puts each receipt\'s reference documents after its last row, only for receipts shown', () => {
+    const rows = [row('PBNK1', 'IV1'), row('PBNK1', 'IV2'), row('PBNK2', 'IV3')];
+    const out = withLinkedDocs(rows, [doc('PBNK1', 'IV9', 9), doc('PBNK3', 'IV8', 8)]);
+    expect(out.map((r) => ('linked' in r ? `link:${r.doc.name}` : r.invoiceName))).toEqual(['IV1', 'IV2', 'link:IV9', 'IV3']);
+  });
+
+  it('tells which other receipt counted the invoice', () => {
+    const all = [row('PBNK1', 'IV1'), row('PBNK2', 'IV9')];
+    const out = withLinkedDocs([all[0]], [doc('PBNK1', 'IV9', 9)], all);
+    expect(out[1]).toMatchObject({ linked: true, countedIn: ['PBNK2'] });
+  });
+
+  it('places them after the last invoice row naming the receipt, once, when a row has several receipts', () => {
+    const rows = [{ id: 'A', receipts: ['PBNK1'] }, { id: 'B', receipts: ['PBNK2', 'PBNK1'] }, { id: 'C', receipts: ['PBNK2'] }];
+    const out = insertLinkedDocs(rows, (r) => r.receipts, [doc('PBNK1', 'IV9', 9), doc('PBNK2', 'CN1', 10)], () => []);
+    expect(out.map((r) => ('linked' in r ? `link:${r.doc.name}` : r.id))).toEqual(['A', 'B', 'link:IV9', 'C', 'link:CN1']);
   });
 });

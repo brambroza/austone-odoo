@@ -19,9 +19,9 @@ import { blockingIssues, excludedReasonOf } from '@/lib/commission/calc';
 import { commissionContext, ctxQuery } from '@/lib/commission/context';
 import { isPeriod, periodDates, periodLabel, shiftPeriod, thaiDay, type PeriodCalendar } from '@/lib/commission/period';
 import { lineFormula, type LineFormula } from '@/lib/commission/explain';
-import { commissionByInvoice, invoiceKeyOf, type InvoiceCommissionRow } from '@/lib/commission/report';
+import { commissionByInvoice, insertLinkedDocs, invoiceKeyOf, receiptsPaying, type InvoiceCommissionRow, type LinkedRow } from '@/lib/commission/report';
 import { targetNote } from '@/lib/commission/target-mode';
-import { getRun, listAdjustments, listLedger, listRates, listReps, listSaleOrders } from '@/lib/commission/repo';
+import { getRun, listAdjustments, listLedger, listLinkedDocs, listRates, listReps, listSaleOrders } from '@/lib/commission/repo';
 import { BONUS_BASE_LABELS, BONUS_DOC_LABELS, EXCLUDED_LABELS, isSalesBase, OWNER_FROM_LABELS, PAYMENT_KIND_LABELS, RUN_STATUS_LABELS, RUN_STATUS_TONE, type RepResult, type RunResults } from '@/lib/commission/types';
 import { baht } from '@/lib/shop/catalog';
 import { cn } from '@/lib/utils';
@@ -47,12 +47,13 @@ export default async function CommissionRunPage({ params, searchParams }: { para
 
   const role = user.role as Role;
   const [run, reps] = await Promise.all([getRun(source.id, period), listReps(source.id)]);
-  const [adjustments, ledger, submittedBy, approvedBy, liveRates] = await Promise.all([
+  const [adjustments, ledger, submittedBy, approvedBy, liveRates, linkedDocs] = await Promise.all([
     run ? listAdjustments(run.id) : Promise.resolve([]),
     sp.rep ? listLedger(source.id, period) : Promise.resolve([]),
     run?.submittedById ? findUserById(run.submittedById) : null,
     run?.approvedById ? findUserById(run.approvedById) : null,
     sp.rep && !run?.snapshot?.rates ? listRates(source.id) : Promise.resolve([]),
+    sp.rep ? listLinkedDocs(source.id, period) : Promise.resolve([]),
   ]);
   // Sale orders behind a rep's incentive: those the run was calculated with, else the last pull.
   const repOrders = sp.rep && (run?.snapshot?.saleOrders || isSalesBase(source.bonusBase)) ? (run?.snapshot?.saleOrders ?? await listSaleOrders(source.id, period)).filter((o) => o.odooUserId === Number(sp.rep)) : [];
@@ -73,6 +74,17 @@ export default async function CommissionRunPage({ params, searchParams }: { para
   const shownLines = repLines.filter((l) => show === 'all' || (excludedReasonOf(l, lineResults.get(l.lineKey)) === null) === (show === 'counted'));
   const drillLines = sp.inv ? shownLines.filter((l) => String(l.invoiceId) === sp.inv) : shownLines;
   const drillInvoices = view === 'invoice' ? commissionByInvoice(shownLines, lineResults) : [];
+  // Invoices Odoo shows on the rep's receipts that the cash did not pay (closed by credit notes): reference
+  // rows, no commission. Credit notes stay in their own section below, with the receipt they went through.
+  const linkedInvoices = linkedDocs.filter((d) => d.moveType === 'out_invoice');
+  const drillRows = view === 'invoice' && show === 'all' ? insertLinkedDocs(drillInvoices, (r) => r.receipts, linkedInvoices, (doc) => receiptsPaying(ledger, doc)) : drillInvoices;
+  const receiptsOfCredit = new Map<number, string[]>();
+  for (const d of linkedDocs) {
+    if (d.moveType !== 'out_refund') continue;
+    const list = receiptsOfCredit.get(d.moveId) ?? [];
+    if (!list.includes(d.receiptName)) list.push(d.receiptName);
+    receiptsOfCredit.set(d.moveId, list);
+  }
   // How each line's commission was worked out, with the rates the run was calculated with.
   const rates = run?.snapshot?.rates ?? liveRates;
   const formulaOf = (l: (typeof repLines)[number]) => lineFormula(l, lineResults.get(l.lineKey), rates);
@@ -111,8 +123,8 @@ export default async function CommissionRunPage({ params, searchParams }: { para
       <section className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm">
         {status === 'DRAFT' && can(role, 'commission.run') && (
           <>
-            <form action={syncPeriodAction}>{hidden}<PendingSubmit icon={<RefreshCw />} label="1. ดึงข้อมูลจาก Odoo" pendingLabel="กำลังดึงข้อมูลจาก Odoo…" hint="ดึงข้อมูลจาก Odoo อาจใช้เวลาหลายนาที กรุณาอย่าปิดหรือรีเฟรชหน้านี้" /></form>
-            <form action={calculateAction}>{hidden}<PendingSubmit icon={<Calculator />} label="2. คำนวณ" pendingLabel="กำลังคำนวณค่าคอม…" disabled={!run?.syncedAt} hint="กำลังคำนวณค่าคอมทุกคนในรอบนี้ กรุณาอย่าปิดหรือรีเฟรชหน้านี้" /></form>
+            <form action={syncPeriodAction}>{hidden}<PendingSubmit progress={{ source: source.id, period }} icon={<RefreshCw />} label="1. ดึงข้อมูลจาก Odoo" pendingLabel="กำลังดึงข้อมูลจาก Odoo…" hint="ดึงข้อมูลจาก Odoo อาจใช้เวลาหลายนาที กรุณาอย่าปิดหรือรีเฟรชหน้านี้" /></form>
+            <form action={calculateAction}>{hidden}<PendingSubmit progress={{ source: source.id, period }} icon={<Calculator />} label="2. คำนวณ" pendingLabel="กำลังคำนวณค่าคอม…" disabled={!run?.syncedAt} hint="กำลังคำนวณค่าคอมทุกคนในรอบนี้ กรุณาอย่าปิดหรือรีเฟรชหน้านี้" /></form>
             {step('submit', '3. ส่งอนุมัติ', <Send />)}
           </>
         )}
@@ -280,7 +292,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
               </Link>
             )}
           </nav>
-          {view === 'invoice' ? <InvoiceTable rows={drillInvoices} formulas={showFormula ? formulasByInvoice : null} lineHref={(id) => drillHref({ view: 'line', inv: String(id) })} /> : (
+          {view === 'invoice' ? <InvoiceTable rows={drillRows} formulas={showFormula ? formulasByInvoice : null} lineHref={(id) => drillHref({ view: 'line', inv: String(id) })} /> : (
           <TableCard>
             <Table>
               <TableHeader className="bg-muted/50">
@@ -344,7 +356,7 @@ export default async function CommissionRunPage({ params, searchParams }: { para
                   <li key={c.id} className="flex flex-wrap items-center gap-x-3 px-3 py-1.5 text-xs">
                     <span className="font-medium">{c.name}</span><span>{thaiDay(c.date)}</span><span className="flex-1 text-muted-foreground">{c.partnerName}{c.originName ? ` · ลดหนี้บิล ${c.originName}` : ''}</span>
                     <span className="tabular-nums">ก่อน VAT {baht(c.base)}</span>
-                    {c.deductedBase !== undefined && <span className={cn('tabular-nums', c.deductedBase ? 'font-semibold text-destructive' : 'text-muted-foreground')}>{c.deductedBase ? `หัก ${baht(c.deductedBase)}` : 'ตัดกับบิลแล้ว ไม่หัก'}</span>}
+                    {c.deductedBase !== undefined && <span className={cn('tabular-nums', c.deductedBase ? 'font-semibold text-destructive' : 'text-muted-foreground')}>{c.deductedBase ? `หัก ${baht(c.deductedBase)}` : receiptsOfCredit.has(c.id) ? `ตัดกับบิล ${receiptsOfCredit.get(c.id)!.join(', ')} แล้ว ไม่หัก` : 'ตัดกับบิลแล้ว ไม่หัก'}</span>}
                   </li>
                 ))}
               </ul>
@@ -362,7 +374,33 @@ const sumOf = (reps: RepResult[], pick: (r: RepResult) => number) => reps.reduce
  * A rep's collected total broken down per invoice (largest first) with the part counted and the
  * commission it earned; the totals match the rep row. Each row opens that invoice's product lines.
  */
-function InvoiceTable({ rows, formulas, lineHref }: { rows: InvoiceCommissionRow[]; formulas: ReadonlyMap<string, { product: string; formula: LineFormula }[]> | null; lineHref: (invoiceId: number) => string }) {
+/** A document Odoo shows on the receipt that its cash did not pay (e.g. closed by credit notes): for reference, no commission. */
+function LinkedInvoiceRow({ row: { doc, countedIn } }: { row: LinkedRow }) {
+  const refund = doc.moveType === 'out_refund';
+  return (
+    <TableRow className="bg-muted/30 text-muted-foreground">
+      <TableCell data-label="ใบแจ้งหนี้" className="whitespace-normal">
+        <span className="font-medium text-foreground">{doc.name}</span>
+        {refund && <Badge variant="outline" className="ml-1 border-transparent bg-sky-500/15 text-sky-800">ใบลดหนี้</Badge>}
+        <Badge variant="outline" className="ml-1 border-transparent bg-muted text-muted-foreground">อ้างอิง</Badge>
+        <span className="block text-xs">{doc.partnerName}{doc.invoiceDate ? ` · ออก ${thaiDay(doc.invoiceDate)}` : ''} · ยอด {baht(doc.amountTotal)}</span>
+      </TableCell>
+      <TableCell data-label="เงินเข้า" className="text-xs whitespace-normal">{thaiDay(doc.cashDate)} · {doc.receiptName}<span className="block">อ้างอิงในใบเสร็จ Odoo</span></TableCell>
+      <TableCell data-label="สินค้า" className="text-xs whitespace-normal">{refund ? 'ตัดกับ ' : 'ปิดด้วย '}{doc.settledBy.map((x) => `${x.name} ${baht(x.amount)}`).join(', ') || '—'}</TableCell>
+      <TableCell data-label="รวม VAT" className="text-right text-xs tabular-nums">{baht(0)}</TableCell>
+      <TableCell data-label="ก่อน VAT" className="text-right tabular-nums">{baht(0)}</TableCell>
+      <TableCell data-label="นำมาคิด" className="text-right tabular-nums">{baht(0)}</TableCell>
+      <TableCell data-label="ค่าคอม" className="text-right tabular-nums">
+        {baht(0)}
+        <span className="mt-1 block text-[11px] font-normal whitespace-normal">{countedIn.length ? `นับในใบเสร็จ ${countedIn.join(', ')}` : refund ? 'ใบลดหนี้ ไม่ใช่เงินสด' : 'ไม่มีเงินสด ไม่คิดค่าคอม'}</span>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function InvoiceTable({ rows: allRows, formulas, lineHref }: { rows: (InvoiceCommissionRow | LinkedRow)[]; formulas: ReadonlyMap<string, { product: string; formula: LineFormula }[]> | null; lineHref: (invoiceId: number) => string }) {
+  const rows = allRows.filter((r): r is InvoiceCommissionRow => !('linked' in r));
+  const linkedCount = allRows.length - rows.length;
   const total = rows.reduce((t, r) => ({ base: t.base + r.base, gross: t.gross + r.gross, counted: t.counted + r.counted, commission: t.commission + r.commission }), { base: 0, gross: 0, counted: 0, commission: 0 });
   return (
     <TableCard>
@@ -379,8 +417,8 @@ function InvoiceTable({ rows, formulas, lineHref }: { rows: InvoiceCommissionRow
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && <EmptyRow colSpan={7}>ไม่มีรายการ</EmptyRow>}
-          {rows.map((r) => (
+          {allRows.length === 0 && <EmptyRow colSpan={7}>ไม่มีรายการ</EmptyRow>}
+          {allRows.map((r) => ('linked' in r ? <LinkedInvoiceRow key={r.key} row={r} /> : (
             <Fragment key={r.key}>
             <TableRow className={cn(formulas && 'border-b-0', r.kind === 'RETRO' && 'bg-amber-500/5')}>
               <TableCell data-label="ใบแจ้งหนี้" className="whitespace-normal">
@@ -403,12 +441,12 @@ function InvoiceTable({ rows, formulas, lineHref }: { rows: InvoiceCommissionRow
               </TableCell>
             </TableRow>}
             </Fragment>
-          ))}
+          )))}
         </TableBody>
         {rows.length > 0 && (
           <tfoot>
             <TableRow className="bg-muted/40 font-semibold">
-              <TableCell colSpan={3} className="text-right text-xs">รวม {rows.length} รายการ</TableCell>
+              <TableCell colSpan={3} className="text-right text-xs">รวม {rows.length} รายการ{linkedCount ? ` (ไม่รวมเอกสารอ้างอิง ${linkedCount} ใบ)` : ''}</TableCell>
               <TableCell className="text-right text-xs tabular-nums">{baht(total.gross)}</TableCell>
               <TableCell className="text-right tabular-nums">{baht(total.base)}</TableCell>
               <TableCell className="text-right tabular-nums">{baht(total.counted)}</TableCell>

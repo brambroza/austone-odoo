@@ -10,7 +10,8 @@ import type {
 } from './types';
 import { bonusSettings, type NewCustomerRow } from './bonus';
 import { targetSettings } from './target-mode';
-import type { DeferredInvoice } from './ledger';
+import type { DeferredInvoice, LinkedDoc } from './ledger';
+import type { RunProgress } from './progress';
 import type { PeriodOverride } from './period';
 import type { NewHold } from './statement';
 
@@ -476,6 +477,35 @@ export async function listDeferred(sourceId: string, period: string): Promise<De
   if (result.error && missingTable(result.error.message, 'deferred')) return [];
   const row = rowOrNull<{ deferred: DeferredInvoice[] | null }>(result);
   return Array.isArray(row?.deferred) ? row.deferred : [];
+}
+
+/** Stores the reference documents of the period's receipts; skipped before migration 20261126120000 ran. */
+export async function saveLinkedDocs(runId: string, linkedDocs: readonly LinkedDoc[]): Promise<void> {
+  const result = await db().from('CommissionRun').update({ linkedDocs }).eq('id', runId);
+  if (result.error && missingTable(result.error.message, 'linkedDocs')) return;
+  unwrap(result);
+}
+
+/** Reference documents of a period's receipts ([] before the migration or the first pull). */
+export async function listLinkedDocs(sourceId: string, period: string): Promise<LinkedDoc[]> {
+  const result = await db().from('CommissionRun').select('linkedDocs').eq('sourceId', sourceId).eq('period', period).maybeSingle();
+  if (result.error && missingTable(result.error.message, 'linkedDocs')) return [];
+  const row = rowOrNull<{ linkedDocs: LinkedDoc[] | null }>(result);
+  return Array.isArray(row?.linkedDocs) ? row.linkedDocs : [];
+}
+
+/** Stores a running action's progress on the run; skipped before migration 20261126150000 ran. */
+export async function saveProgress(runId: string, progress: RunProgress): Promise<void> {
+  const result = await db().from('CommissionRun').update({ progress }).eq('id', runId);
+  if (result.error && missingTable(result.error.message, 'progress')) return;
+  unwrap(result);
+}
+
+/** Progress last stored for a period's run (null before the migration or any run). */
+export async function getProgress(sourceId: string, period: string): Promise<RunProgress | null> {
+  const result = await db().from('CommissionRun').select('progress').eq('sourceId', sourceId).eq('period', period).maybeSingle();
+  if (result.error && missingTable(result.error.message, 'progress')) return null;
+  return rowOrNull<{ progress: RunProgress | null }>(result)?.progress ?? null;
 }
 
 // ---------- adjustments ----------

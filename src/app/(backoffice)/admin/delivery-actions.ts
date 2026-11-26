@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { audit } from '@/lib/auth/audit';
 import { requireAdmin } from '@/lib/auth/session';
 import { flash } from '@/lib/flash';
-import { createCarrier, setCarrierActive, updateCarrier } from '@/lib/odoo/delivery-carrier';
+import { createCarrier, listAllCarriers, setCarrierActive, updateCarrier } from '@/lib/odoo/delivery-carrier';
 import { odooWritesEnabled } from '@/lib/odoo/rpc';
 import { clearReferenceCache } from '@/lib/shop/catalog';
 import { setFreightRates } from '@/lib/admin/store';
@@ -125,12 +125,7 @@ export async function saveFreightRatesAction(formData: FormData) {
   const actor = await requireAdmin();
   const id = idSchema.safeParse(field(formData, 'id')).data;
   if (!id) redirect(backTo(formData));
-  const rates: FreightRates = {};
-  for (const type of FREIGHT_TYPES) {
-    const parsed = parseFreightRate(field(formData, `freight_${type}`));
-    if (parsed && typeof parsed === 'object') return fail(formData, 'บันทึกไม่สำเร็จ', `${DEALER_TYPE_LABELS[type]}: ${parsed.error}`, { edit: String(id) });
-    if (parsed) rates[type] = parsed;
-  }
+  const rates = await readFreightRates(formData, id);
   let saved: FreightRates;
   try {
     saved = await setFreightRates(id, rates);
@@ -142,4 +137,43 @@ export async function saveFreightRatesAction(formData: FormData) {
   revalidatePath('/shop/cart');
   await flash('บันทึกส่วนลดค่าขนส่งแล้ว', { icon: 'truck', description: formatFreightRates(saved) || 'ไม่มีส่วนลด' });
   redirect(backTo(formData));
+}
+
+/**
+ * "ใช้อัตรานี้กับทุกขนส่ง": saves the rates typed in the form to every delivery method in Odoo, archived
+ * ones included, in one write. Each method keeps its own copy, so it can be edited on its own afterwards.
+ */
+export async function applyFreightRatesToAllAction(formData: FormData) {
+  const actor = await requireAdmin();
+  const id = idSchema.safeParse(field(formData, 'id')).data;
+  if (!id) redirect(backTo(formData));
+  const rates = await readFreightRates(formData, id);
+  let targetIds: number[];
+  try {
+    targetIds = [...new Set([id, ...(await listAllCarriers()).map((c) => c.id)])];
+  } catch (e) {
+    return fail(formData, 'บันทึกไม่สำเร็จ', `อ่านรายการวิธีจัดส่งจาก Odoo ไม่ได้: ${odooError(e)}`, { edit: String(id) });
+  }
+  let saved: FreightRates;
+  try {
+    saved = await setFreightRates(targetIds, rates);
+  } catch (e) {
+    return fail(formData, 'บันทึกไม่สำเร็จ', e instanceof Error ? e.message : 'บันทึกไม่ได้', { edit: String(id) });
+  }
+  await audit(actor.id, 'delivery.freight.apply_all', 'delivery.carrier', String(id), { rates: saved, carrierIds: targetIds });
+  revalidatePath(PAGE);
+  revalidatePath('/shop/cart');
+  await flash(`ใช้อัตรานี้กับทุกขนส่งแล้ว (${targetIds.length} วิธี)`, { icon: 'truck', description: formatFreightRates(saved) || 'ไม่มีส่วนลด' });
+  redirect(backTo(formData));
+}
+
+/** Reads the `freight_<TYPE>` fields; an invalid one sends the admin back to the open form with the error. */
+async function readFreightRates(formData: FormData, id: number): Promise<FreightRates> {
+  const rates: FreightRates = {};
+  for (const type of FREIGHT_TYPES) {
+    const parsed = parseFreightRate(field(formData, `freight_${type}`));
+    if (parsed && typeof parsed === 'object') return fail(formData, 'บันทึกไม่สำเร็จ', `${DEALER_TYPE_LABELS[type]}: ${parsed.error}`, { edit: String(id) });
+    if (parsed) rates[type] = parsed;
+  }
+  return rates;
 }

@@ -12,8 +12,9 @@ import { requirePermission } from '@/lib/auth/session';
 import { pickStepPercent } from '@/lib/commission/calc';
 import { commissionContext, ctxQuery } from '@/lib/commission/context';
 import { periodDates, periodLabel, thaiDay } from '@/lib/commission/period';
-import { groupByInvoice } from '@/lib/commission/report';
-import { getRun, listDeferred, listLedger, listSteps } from '@/lib/commission/repo';
+import { groupByInvoice, withLinkedDocs } from '@/lib/commission/report';
+import type { LinkedDoc } from '@/lib/commission/ledger';
+import { getRun, listDeferred, listLedger, listLinkedDocs, listSteps } from '@/lib/commission/repo';
 import { baht } from '@/lib/shop/catalog';
 import { cn } from '@/lib/utils';
 import { syncPeriodAction } from '../actions';
@@ -32,15 +33,20 @@ export default async function CommissionCollectionsPage({ searchParams }: { sear
   const params = await searchParams;
   const ctx = await commissionContext(params);
   const source = ctx.source;
-  const [ledger, steps, run, deferred] = source
-    ? await Promise.all([listLedger(source.id, ctx.period), listSteps(source.id), getRun(source.id, ctx.period), listDeferred(source.id, ctx.period)])
-    : [[], [], null, []];
+  const [ledger, steps, run, deferred, linked] = source
+    ? await Promise.all([listLedger(source.id, ctx.period), listSteps(source.id), getRun(source.id, ctx.period), listDeferred(source.id, ctx.period), listLinkedDocs(source.id, ctx.period)])
+    : [[], [], null, [], []];
   const all = groupByInvoice(ledger);
   const reps = [...new Map(all.filter((r) => r.odooUserId !== null).map((r) => [String(r.odooUserId), r.repName ?? ''])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const q = searchText(params.q);
+  // Searching a document shown only for reference (e.g. an invoice closed by credit notes) finds its receipt.
+  const linkedNames = new Map<string, string[]>();
+  for (const d of linked) linkedNames.set(d.receiptName, [...(linkedNames.get(d.receiptName) ?? []), d.name]);
   const rows = all.filter((r) => (!params.rep || String(r.odooUserId ?? 'none') === params.rep) && (params.issues !== '1' || r.issues.length > 0)
-    && matchesSearch(q, r.receiptName, r.partnerName, r.invoiceName, r.repName));
-  const page = paginate(rows, params.page);
+    && matchesSearch(q, r.receiptName, r.partnerName, r.invoiceName, r.repName, ...(linkedNames.get(r.receiptName) ?? [])));
+  const shown = params.issues === '1' ? rows : withLinkedDocs(rows, linked, all);
+  const linkedCount = shown.length - rows.length;
+  const page = paginate(shown, params.page);
   const sum = (key: 'base' | 'gross') => rows.reduce((s, r) => s + r[key], 0);
   const withIssues = all.filter((r) => r.issues.length).length;
   const filter = { source: source?.id, period: ctx.period, q: params.q, rep: params.rep, issues: params.issues };
@@ -56,7 +62,7 @@ export default async function CommissionCollectionsPage({ searchParams }: { sear
             {canSync && (
               <form action={syncPeriodAction}>
                 <input type="hidden" name="source" value={source.id} /><input type="hidden" name="period" value={ctx.period} /><input type="hidden" name="returnTo" value="collections" />
-                <PendingSubmit variant="default" icon={<RefreshCw />} label="ดึงข้อมูลจาก Odoo" pendingLabel="กำลังดึงข้อมูลจาก Odoo…" hint="ดึงข้อมูลจาก Odoo อาจใช้เวลาหลายนาที กรุณาอย่าปิดหรือรีเฟรชหน้านี้" disabled={run?.status === 'APPROVED' || run?.status === 'PAID'} />
+                <PendingSubmit variant="default" icon={<RefreshCw />} progress={{ source: source.id, period: ctx.period }} label="ดึงข้อมูลจาก Odoo" pendingLabel="กำลังดึงข้อมูลจาก Odoo…" hint="ดึงข้อมูลจาก Odoo อาจใช้เวลาหลายนาที กรุณาอย่าปิดหรือรีเฟรชหน้านี้" disabled={run?.status === 'APPROVED' || run?.status === 'PAID'} />
               </form>
             )}
             <Button size="sm" variant="outline" nativeButton={false} render={<a href={`/api/admin/commission/export?${ctxQuery(ctx, { kind: 'collections' })}`} />}><Download /> Excel</Button>
@@ -69,7 +75,7 @@ export default async function CommissionCollectionsPage({ searchParams }: { sear
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Tile label="เงินเข้า (รวม VAT)" value={baht(sum('gross'))} sub={`${rows.length} รายการ ใบเสร็จ × ใบแจ้งหนี้`} />
             <Tile label="ฐานค่าคอม (ก่อน VAT)" value={baht(sum('base'))} sub="แบ่งตามสัดส่วนบรรทัดสินค้า" />
-            <Tile label="ใบแจ้งหนี้" value={String(new Set(rows.map((r) => r.invoiceName).filter(Boolean)).size)} sub={`${new Set(rows.map((r) => r.receiptName)).size} ใบเสร็จ/รายการเงินเข้า`} />
+            <Tile label="ใบแจ้งหนี้" value={String(new Set(rows.map((r) => r.invoiceName).filter(Boolean)).size)} sub={`${new Set(rows.map((r) => r.receiptName)).size} ใบเสร็จ/รายการเงินเข้า${linkedCount ? ` · อ้างอิง ${linkedCount} เอกสาร (ไม่มีเงินสด)` : ''}`} />
             <Tile label="ต้องตรวจสอบ" value={String(withIssues)} sub="ไม่มีพนักงาน / ไม่มี pricelist / ไม่ใช่ใบแจ้งหนี้" warn={withIssues > 0} />
           </section>
 
@@ -118,6 +124,7 @@ export default async function CommissionCollectionsPage({ searchParams }: { sear
               <TableBody>
                 {page.items.length === 0 && <EmptyRow colSpan={9}>{ledger.length ? 'ไม่พบตามตัวกรอง' : 'ยังไม่มีข้อมูล กด “ดึงข้อมูลจาก Odoo”'}</EmptyRow>}
                 {page.items.map((r) => {
+                  if ('linked' in r) return <LinkedDocRow key={r.key} doc={r.doc} countedIn={r.countedIn} />;
                   const step = r.invoiceName ? pickStepPercent(steps, r.overdueDays ?? 0, r.cashDate) : null;
                   return (
                     <TableRow key={r.key} className={cn(r.kind === 'RETRO' && 'bg-amber-500/5')}>
@@ -145,6 +152,35 @@ export default async function CommissionCollectionsPage({ searchParams }: { sear
         </>
       )}
     </div>
+  );
+}
+
+/** A document Odoo shows on the receipt that its cash did not pay: listed for reference, no commission. */
+function LinkedDocRow({ doc, countedIn }: { doc: LinkedDoc; countedIn: string[] }) {
+  const refund = doc.moveType === 'out_refund';
+  return (
+    <TableRow className="bg-muted/30 text-muted-foreground">
+      <TableCell data-label="วันเงินเข้า" className="text-xs">{thaiDay(doc.cashDate)}</TableCell>
+      <TableCell data-label="ใบเสร็จ" className="text-xs whitespace-normal">{doc.receiptName}<span className="block">อ้างอิงในใบเสร็จ Odoo</span></TableCell>
+      <TableCell data-label="ใบแจ้งหนี้" className="text-xs">
+        <span className="font-medium text-foreground">{doc.name}</span>
+        {refund && <Badge variant="outline" className="ml-1 border-transparent bg-sky-500/15 text-sky-800">ใบลดหนี้</Badge>}
+        <span className="block">{doc.invoiceDate ? thaiDay(doc.invoiceDate) : ''} · ยอด {baht(doc.amountTotal)}</span>
+      </TableCell>
+      <TableCell data-label="ครบกำหนด" className="text-xs">—</TableCell>
+      <TableCell data-label="เกินดิว" className="text-right text-xs">—</TableCell>
+      <TableCell data-label="พนักงานขาย" className="text-xs">—</TableCell>
+      <TableCell data-label="Pricelist" className="text-xs whitespace-normal">
+        {refund ? 'ตัดกับ ' : 'ปิดด้วย '}{doc.settledBy.map((s) => `${s.name} ${baht(s.amount)}`).join(', ') || '—'}
+      </TableCell>
+      <TableCell data-label="รวม VAT" className="text-right tabular-nums">{baht(0)}</TableCell>
+      <TableCell data-label="ก่อน VAT" className="text-right tabular-nums">
+        {baht(0)}
+        <span className="mt-1 block text-[11px] whitespace-normal">
+          {countedIn.length ? `นับค่าคอมในใบเสร็จ ${countedIn.join(', ')}` : refund ? 'ใบลดหนี้ ไม่ใช่เงินสด' : 'ไม่มีเงินสดจากใบเสร็จนี้ ไม่คิดค่าคอม'}
+        </span>
+      </TableCell>
+    </TableRow>
   );
 }
 

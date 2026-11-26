@@ -179,3 +179,26 @@ describe('customer groups', () => {
     expect((await store.groupMemberCounts()).size).toBe(0);
   });
 });
+
+describe('freight discounts', () => {
+  it('saves the same rates to several delivery methods at once and keeps the others', async () => {
+    const { FREIGHT_TYPES } = await import('@/lib/shop/freight');
+    const [first] = FREIGHT_TYPES;
+    await store.setFreightRates(9, { [first]: 5 });
+    const saved = await store.setFreightRates([1, 2, 2, 0, -3], { [first]: 12.345 });
+    expect(saved).toEqual({ [first]: 12.35 });
+    const all = await store.listFreightDiscounts();
+    expect(all['1']).toEqual({ [first]: 12.35 });
+    expect(all['2']).toEqual({ [first]: 12.35 });
+    expect(all['9']).toEqual({ [first]: 5 });
+    expect(Object.keys(all).sort()).toEqual(['1', '2', '9']);
+  });
+
+  it('clears every listed method when no valid rate is left', async () => {
+    const { FREIGHT_TYPES } = await import('@/lib/shop/freight');
+    const [first] = FREIGHT_TYPES;
+    await store.setFreightRates([1, 2], { [first]: 10 });
+    await store.setFreightRates([1, 2], {});
+    expect(await store.listFreightDiscounts()).toEqual({});
+  });
+});
