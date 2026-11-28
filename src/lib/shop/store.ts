@@ -12,8 +12,8 @@ import { ORDER_STATUS_FLOW } from './types';
 
 type OrderRow = {
   id: string; ref: string; scope: string; dealerName: string; status: OrderStatus; paymentMethod: ProtoOrder['paymentMethod'];
-  subtotal: number | string; cashDiscount: number | string; couponDiscount: number | string; total: number | string;
-  lines: ProtoOrder['lines']; coupon: ProtoOrder['coupon']; odooPricelistId: number | null; address: string; carrier: string; carrierId?: number | null; note: string;
+  subtotal: number | string; cashDiscount: number | string; couponDiscount: number | string; promotionDiscount?: number | string | null; total: number | string;
+  lines: ProtoOrder['lines']; coupon: ProtoOrder['coupon']; promotion?: ProtoOrder['promotion']; odooPricelistId: number | null; address: string; carrier: string; carrierId?: number | null; note: string;
   poRef: string | null; trackingRef: string | null; payment: ProtoOrder['payment']; events: ProtoOrder['events']; odoo: OdooSync | null; createdAt: string;
 };
 
@@ -42,6 +42,8 @@ function toOrder(row: OrderRow): ProtoOrder {
     freightDiscount: Math.round((row.lines ?? []).reduce((sum, l) => sum + (l.freightDiscount ?? 0), 0) * 100) / 100,
     coupon: row.coupon ?? null,
     couponDiscount: money(row.couponDiscount),
+    promotion: row.promotion ?? null,
+    promotionDiscount: money(row.promotionDiscount ?? 0),
     total: money(row.total),
     odooPricelistId: row.odooPricelistId,
     paymentMethod: row.paymentMethod,
@@ -62,9 +64,11 @@ const nowIso = () => new Date().toISOString();
 
 // ---------- carts ----------
 
-async function readCart(scope: string): Promise<{ items: CartItem[]; couponCode: string | null }> {
-  const row = unwrap(await db().from('ShopCart').select('items, couponCode').eq('scope', scope).maybeSingle()) as { items: CartItem[]; couponCode: string | null } | null;
-  return row ?? { items: [], couponCode: null };
+type CartRow = { items: CartItem[]; couponCode: string | null; promotionRewardId: number | null };
+
+async function readCart(scope: string): Promise<CartRow> {
+  const row = unwrap(await db().from('ShopCart').select('items, couponCode, promotionRewardId').eq('scope', scope).maybeSingle()) as CartRow | null;
+  return row ?? { items: [], couponCode: null, promotionRewardId: null };
 }
 
 export async function getCart(sessionId: string): Promise<CartItem[]> {
@@ -83,6 +87,19 @@ export async function getCartCoupon(sessionId: string): Promise<string | null> {
 /** Sets (or clears with null) the coupon code of a cart. */
 export async function setCartCoupon(sessionId: string, code: string | null): Promise<void> {
   unwrap(await db().from('ShopCart').upsert({ scope: sessionId, couponCode: code || null, updatedAt: nowIso() }, { onConflict: 'scope' }));
+}
+
+/**
+ * Promotion the dealer picked for this cart: null = not picked (the best one applies),
+ * 0 = no promotion, otherwise the Odoo `loyalty.reward` id.
+ */
+export async function getCartPromotion(sessionId: string): Promise<number | null> {
+  return (await readCart(sessionId)).promotionRewardId ?? null;
+}
+
+/** Stores the dealer's promotion pick (see `getCartPromotion`). */
+export async function setCartPromotion(sessionId: string, rewardId: number | null): Promise<void> {
+  unwrap(await db().from('ShopCart').upsert({ scope: sessionId, promotionRewardId: rewardId, updatedAt: nowIso() }, { onConflict: 'scope' }));
 }
 
 /** Pure: adds `qty` base units to the product + unit line, or appends one. Exported for tests. */

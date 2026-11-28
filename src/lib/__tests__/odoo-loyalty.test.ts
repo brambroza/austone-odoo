@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/odoo/rpc', () => ({ odooSearchRead: vi.fn(), odooRead: vi.fn(), odooWrite: vi.fn() }));
-const { buildProgramValues, generateCoupons, toDefinition } = await import('@/lib/odoo/loyalty');
+const { applyCouponToOrder, applyPromotionToOrder, buildProgramValues, generateCoupons, listPromotions, toDefinition, toPromotion } = await import('@/lib/odoo/loyalty');
 const rpc = await import('@/lib/odoo/rpc');
 
 const program = {
@@ -34,6 +34,13 @@ describe('toDefinition', () => {
     expect(toDefinition('X', program, [rule({ product_tag_id: [1, 'Promo'] })], [reward], null, 1).rules[0].unsupported).toBe(true);
     expect(toDefinition('X', program, [rule({ product_domain: "[('list_price', '>', 100)]" })], [reward], null, 1).rules[0].unsupported).toBe(true);
     expect(toDefinition('X', program, [rule({ product_domain: "[('list_price', '>', 100)]", valid_product_ids: [5] })], [reward], null, 1).rules[0].unsupported).toBe(false);
+  });
+
+  it('reads Odoo 19 rules (no any_product): no product filter means any product', () => {
+    const odoo19 = (patch: object) => { const { any_product: _a, valid_product_ids: _v, ...r } = rule(patch); return r; };
+    expect(toDefinition('X', program, [odoo19({})], [reward], null, 1).rules[0]).toMatchObject({ anyProduct: true, productIds: [] });
+    expect(toDefinition('X', program, [odoo19({ product_category_id: [4, 'AT-PCR'] })], [reward], null, 1).rules[0]).toMatchObject({ anyProduct: false, categoryId: 4 });
+    expect(toDefinition('X', program, [odoo19({ product_tag_id: [1, 'Promo'] })], [reward], null, 1).rules[0]).toMatchObject({ anyProduct: false, unsupported: true });
   });
 
   it('describes a coupon card', () => {
@@ -77,5 +84,79 @@ describe('generateCoupons', () => {
       { program_id: 9, points: 1, partner_id: 900, expiration_date: '2026-12-31' },
       { program_id: 9, points: 1, partner_id: 900, expiration_date: '2026-12-31' },
     ]]);
+  });
+});
+
+describe('toPromotion', () => {
+  const promo = { ...program, id: 4, name: 'PCR กระเป๋า', program_type: 'promotion', trigger: 'auto' as const, date_to: false as const, pricelist_ids: [19, 27] };
+  const autoRule = (patch: object = {}) => ({ id: 6, program_id: [4, 'x'] as [number, string], mode: 'auto' as const, code: false as const, minimum_amount: 0, minimum_qty: 4,
+    product_ids: [] as number[], product_category_id: [4, 'AT-PCR'] as [number, string], product_tag_id: false as const, product_domain: '[]', reward_point_amount: 1, reward_point_mode: 'order' as const, ...patch });
+  const bag = { ...reward, id: 6, program_id: [4, 'x'] as [number, string], reward_type: 'product' as const, description: 'Free Product - กระเป๋า', discount_applicability: 'order' as const,
+    reward_product_id: [228, 'กระเป๋าเดินทาง Austone 20 นิ้ว'] as [number, string], reward_product_ids: [228], reward_product_qty: 1, multi_product: false, reward_product_tag_id: false as const };
+
+  it('keeps the program own automatic rules with their points and the free product', () => {
+    const def = toPromotion(promo, [autoRule(), autoRule({ id: 19, minimum_qty: 8, reward_point_mode: 'unit' }), autoRule({ id: 99, program_id: [5, 'other'] }), autoRule({ id: 7, mode: 'with_code', code: 'X' })], [bag]);
+    expect(def).toMatchObject({ programId: 4, programName: 'PCR กระเป๋า', pricelistIds: [19, 27], dateTo: null });
+    expect(def.rules).toEqual([
+      expect.objectContaining({ minimumQty: 4, categoryId: 4, pointMode: 'order', pointAmount: 1 }),
+      expect.objectContaining({ minimumQty: 8, pointMode: 'unit' }),
+    ]);
+    expect(def.rewards[0]).toMatchObject({ id: 6, type: 'product', freeProduct: { id: 228, name: 'กระเป๋าเดินทาง Austone 20 นิ้ว', qty: 1 }, multiProduct: false });
+  });
+
+  it('lists active automatic promotions from Odoo and caches them', async () => {
+    vi.mocked(rpc.odooSearchRead).mockReset()
+      .mockResolvedValueOnce([promo]).mockResolvedValueOnce([autoRule()]).mockResolvedValueOnce([bag]);
+    const first = await listPromotions();
+    expect(first.map((p) => [p.programId, p.rules.length, p.rewards.length])).toEqual([[4, 1, 1]]);
+    expect(rpc.odooSearchRead).toHaveBeenNthCalledWith(1, 'loyalty.program', [['program_type', 'in', ['promotion', 'buy_x_get_y']], ['trigger', '=', 'auto'], ['active', '=', true]], expect.any(Array), { order: 'sequence, id' });
+    await expect(listPromotions()).resolves.toBe(first);
+    expect(rpc.odooSearchRead).toHaveBeenCalledTimes(3);
+  });
+
+  it('flags a free product the dealer would have to choose', () => {
+    expect(toPromotion(promo, [], [{ ...bag, reward_product_ids: [228, 229] }]).rewards[0].multiProduct).toBe(true);
+    expect(toPromotion(promo, [], [{ ...bag, reward_product_tag_id: [3, 'bags'] as [number, string] }]).rewards[0].multiProduct).toBe(true);
+  });
+});
+
+describe('applying rewards to a sale order', () => {
+  beforeEach(() => {
+    vi.mocked(rpc.odooRead).mockReset();
+    vi.mocked(rpc.odooWrite).mockReset();
+  });
+
+  it('applies the chosen promotion through the reward wizard when Odoo offers several', async () => {
+    vi.mocked(rpc.odooRead).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    vi.mocked(rpc.odooWrite).mockResolvedValueOnce({ res_model: 'sale.loyalty.reward.wizard' }).mockResolvedValueOnce(41).mockResolvedValueOnce(true);
+    await applyPromotionToOrder(3300, 8);
+    expect(rpc.odooWrite).toHaveBeenNthCalledWith(1, 'sale.order', 'action_open_reward_wizard', [[3300]]);
+    expect(rpc.odooWrite).toHaveBeenNthCalledWith(2, 'sale.loyalty.reward.wizard', 'create', [[{ order_id: 3300, selected_reward_id: 8 }]]);
+    expect(rpc.odooWrite).toHaveBeenNthCalledWith(3, 'sale.loyalty.reward.wizard', 'action_apply', [[41]]);
+    expect(rpc.odooRead).toHaveBeenCalledWith('sale.order.line', 'search_count', [[['order_id', '=', 3300], ['reward_id', '=', 8]]]);
+  });
+
+  it('accepts Odoo applying the only claimable reward itself', async () => {
+    vi.mocked(rpc.odooRead).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    vi.mocked(rpc.odooWrite).mockResolvedValueOnce(true);
+    await applyPromotionToOrder(3300, 6);
+    expect(rpc.odooWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a promotion already on the order and throws when Odoo did not give it', async () => {
+    vi.mocked(rpc.odooRead).mockResolvedValueOnce(1);
+    await applyPromotionToOrder(3300, 6);
+    expect(rpc.odooWrite).not.toHaveBeenCalled();
+    vi.mocked(rpc.odooRead).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    vi.mocked(rpc.odooWrite).mockResolvedValueOnce(true);
+    await expect(applyPromotionToOrder(3300, 6)).rejects.toThrow('reward #6');
+  });
+
+  it('still applies a coupon when the order already has a promotion line of another program', async () => {
+    vi.mocked(rpc.odooRead).mockResolvedValueOnce(0);
+    vi.mocked(rpc.odooWrite).mockResolvedValueOnce(51).mockResolvedValueOnce(true);
+    await applyCouponToOrder(3300, 'TIRE500', 9);
+    expect(rpc.odooRead).toHaveBeenCalledWith('sale.order.line', 'search_count', [[['order_id', '=', 3300], ['reward_id.program_id', '=', 9]]]);
+    expect(rpc.odooWrite).toHaveBeenCalledWith('sale.loyalty.coupon.wizard', 'create', [[{ order_id: 3300, coupon_code: 'TIRE500' }]]);
   });
 });

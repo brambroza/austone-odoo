@@ -25,6 +25,14 @@ describe('odooWrite guard', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('allows applying an automatic promotion through the reward wizard only', async () => {
+    vi.stubEnv('ODOO_READ_ONLY', 'false');
+    await expect(odooWrite('sale.loyalty.reward.wizard', 'unlink', [[1]])).rejects.toThrow('not an allowed write');
+    await expect(odooWrite('sale.loyalty.reward.wizard', 'write', [[1], {}])).rejects.toThrow('not an allowed write');
+    await expect(odooWrite('sale.order', 'action_apply_loyalty', [[1]])).rejects.toThrow('not an allowed write');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('blocks methods outside the allow-list even when writes are on', async () => {
     vi.stubEnv('ODOO_READ_ONLY', 'false');
     await expect(odooWrite('sale.order', 'unlink', [[1]])).rejects.toThrow('not an allowed write');

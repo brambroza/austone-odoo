@@ -6,8 +6,8 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { baht, defaultQty, findProduct, getCatalog, getDealerCarrier, searchProducts } from '@/lib/shop/catalog';
 import { flash } from '@/lib/flash';
-import { billTotals, cashDiscountPerUnit, cashPercentOf, orderPricelistId, resolvePrice, withCoupon } from '@/lib/shop/pricing';
-import { checkCartCoupon } from '@/lib/shop/cart-coupon';
+import { billTotals, cashDiscountPerUnit, cashPercentOf, orderPricelistId, resolvePrice, withCoupon, withPromotion } from '@/lib/shop/pricing';
+import { checkCartCoupon, checkCartPromotions } from '@/lib/shop/cart-coupon';
 import { freightDiscountOf, freightRatesFor } from '@/lib/shop/freight';
 import { listFreightDiscounts } from '@/lib/admin/store';
 import { normalizeCode } from '@/lib/shop/coupon';
@@ -32,7 +32,7 @@ import { addressFromForm, shippingSchema, thaiAddressSchema } from '@/lib/shop/s
 import { formatThaiAddress } from '@/lib/thai-address';
 import { updateDealer } from '@/lib/dealers/repo';
 import { isBackofficeRole, type Role } from '@/lib/auth/roles';
-import { ORDER_STATUS_LABELS, type OrderCoupon, type OrderLine } from '@/lib/shop/types';
+import { ORDER_STATUS_LABELS, type OrderCoupon, type OrderLine, type OrderPromotion } from '@/lib/shop/types';
 
 const qtySchema = z.coerce.number().int().min(1).max(999);
 const idSchema = z.coerce.number().int().positive();
@@ -127,6 +127,16 @@ export async function removeCouponAction() {
   await flash('ลบโค้ดส่วนลดแล้ว', { icon: 'coupon' });
 }
 
+/** Stores the promotion the dealer picked in the cart (`rewardId` 0 = no promotion); checkout checks it again. */
+export async function selectPromotionAction(formData: FormData) {
+  const parsed = z.coerce.number().int().min(0).safeParse(formData.get('rewardId'));
+  if (!parsed.success) return;
+  const sid = await ensureSessionId();
+  await store.setCartPromotion(sid, parsed.data);
+  revalidatePath('/shop/cart');
+  await flash(parsed.data === 0 ? 'ไม่ใช้โปรโมชัน' : 'เลือกโปรโมชันแล้ว', { icon: 'coupon', description: parsed.data === 0 ? undefined : 'ตรวจสิทธิ์อีกครั้งตอนสั่งซื้อ' });
+}
+
 export async function clearCartAction() {
   const sid = await ensureSessionId();
   await store.setCart(sid, []);
@@ -215,7 +225,15 @@ async function placeOrder(sid: string, input: CheckoutInput, shipTo: string, sli
     if (!result?.ok) redirect('/shop/cart?error=' + encodeURIComponent(`โค้ด ${code}: ${result?.reason ?? 'ใช้ไม่ได้'} · ลบโค้ดหรือแก้ตะกร้าก่อนสั่ง`));
     coupon = { code, programId: result.programId, programName: result.programName, label: result.label, discount: result.discount };
   }
-  const totals = withCoupon(billTotals(lines, paymentMethod), coupon?.discount ?? 0);
+  // Promotion: the dealer's pick, or the best one, re-evaluated against Odoo here. Odoo unreachable: refuse rather than drop a discount the cart showed.
+  const pick = await store.getCartPromotion(sid);
+  const promo = (await checkCartPromotions(catalog, profile, priced, [paymentMethod], pick))[paymentMethod];
+  if (promo?.error && pick !== 0) redirect('/shop/cart?error=' + encodeURIComponent(promo.error));
+  const chosen = promo?.selected ?? null;
+  const promotion: OrderPromotion | null = chosen
+    ? { rewardId: chosen.rewardId, programId: chosen.programId, programName: chosen.programName, label: chosen.label, discount: chosen.discount, freeProduct: chosen.freeProduct }
+    : null;
+  const totals = withPromotion(withCoupon(billTotals(lines, paymentMethod), coupon?.discount ?? 0), promotion?.discount ?? 0);
   if (paymentMethod === 'CREDIT') {
     // Web limit and Odoo credit_limit both apply. Odoo unreachable: only the web limit; sales still confirms the order.
     const { line: credit, overdue } = await getCreditSummary(profile);
@@ -238,6 +256,7 @@ async function placeOrder(sid: string, input: CheckoutInput, shipTo: string, sli
       paymentMethod,
       ...totals,
       coupon,
+      promotion,
       odooPricelistId: orderPricelistId(profile),
       address: shipTo,
       carrier: carrier.name,

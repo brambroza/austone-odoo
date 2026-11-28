@@ -165,7 +165,7 @@ export function lineCommission(line: LedgerLine, input: Pick<CalcInput, 'rates' 
     const undated = pickRate(input.rates.filter((r) => r.validFrom > invoiceDate).map((r) => ({ ...r, validFrom: '0000-01-01', validTo: null })), line, group);
     const later = undated && input.rates.find((r) => r.id === undated.id);
     const hint = later ? ` (มีอัตราแต่เริ่มใช้ ${later.validFrom} หลังวันที่ใบแจ้งหนี้ ${invoiceDate})` : '';
-    return { ...empty, specialPercent, stepPercent, issue: `ไม่มีอัตราค่าคอมสำหรับ ${where}${hint}` };
+    return { ...empty, specialPercent, stepPercent, issue: `ไม่มีอัตราค่าคอมสำหรับ ${where}${hint} · ตั้งอัตรา Default (ทุกหมวดสินค้า / ทุก pricelist) เพื่อให้สินค้าที่ไม่ตรงอัตราไหนได้ค่าคอม` };
   }
   const basic = basicAmount(rate, line);
   const beforeStep = (basic * specialPercent) / 100;

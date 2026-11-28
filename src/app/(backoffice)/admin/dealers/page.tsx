@@ -557,7 +557,7 @@ function TypePricelistFields({ saved, savedPercents, pricelists }: { saved: Part
           );
         })}
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">ช่อง % = ส่วนลดเงินสดเมื่อลูกค้าเครดิตเลือกจ่ายสด ใช้ก่อนทุกค่า · ว่าง = ใช้ค่าที่ตั้งรายสินค้า (หน้าส่วนลดเงินสด) แล้วจึงใช้ % ของ pricelist · 0 = ไม่ให้ส่วนลดกลุ่มนี้</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">ช่อง % = ส่วนลดเงินสดเมื่อร้านจ่ายสด (ทั้งเครดิตและเงินสด) ใช้ก่อนทุกค่า · ว่าง = ใช้ค่าที่ตั้งรายสินค้า (หน้าส่วนลดเงินสด) แล้วจึงใช้ % ของ pricelist · 0 = ไม่ให้ส่วนลดกลุ่มนี้</p>
     </fieldset>
   );
 }

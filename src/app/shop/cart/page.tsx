@@ -7,13 +7,13 @@ import { baht, findProduct, getCatalog, getDealerCarrier } from '@/lib/shop/cata
 import { getCreditSummary } from '@/lib/shop/credit-line';
 import { isInGrace, isOverdueLocked, overdueGraceMessage, overdueLockMessage } from '@/lib/shop/credit';
 import { getWireTransferAccounts } from '@/lib/odoo/wire-transfer';
-import { billTotals, cashDiscountPerUnit, cashPercentOf, resolvePrice, uniformCashPercent, withCoupon } from '@/lib/shop/pricing';
+import { billTotals, cashDiscountPerUnit, cashPercentOf, resolvePrice, uniformCashPercent, withCoupon, withPromotion } from '@/lib/shop/pricing';
 import { canSeeProduct, getDealerProfile } from '@/lib/shop/dealer';
-import { checkCartCoupon } from '@/lib/shop/cart-coupon';
+import { checkCartCoupon, checkCartPromotions } from '@/lib/shop/cart-coupon';
 import { freightDiscountOf, freightRatesFor, freightUnitLabel } from '@/lib/shop/freight';
 import { listFreightDiscounts } from '@/lib/admin/store';
 import { getSessionId } from '@/lib/shop/session';
-import { getCart, getCartCoupon } from '@/lib/shop/store';
+import { getCart, getCartCoupon, getCartPromotion } from '@/lib/shop/store';
 import { Input } from '@/components/ui/input';
 import { describeQty, pickUnit } from '@/lib/shop/units';
 import { requireDealerAccess } from '@/lib/auth/session';
@@ -24,7 +24,8 @@ import { CartQtyStepper } from '@/components/shop/cart-qty-stepper';
 import { CartUndoToast, ClearCartButton } from '@/components/shop/cart-undo';
 import { ProductImage } from '@/components/shop/product-image';
 import { CheckoutSummary } from '@/components/shop/checkout-summary';
-import { applyCouponAction, changeCartUnitAction, checkoutAction, clearCartAction, removeCouponAction, restoreCartLineAction, updateCartQtyAction } from '../actions';
+import { PromotionPicker } from '@/components/shop/promotion-picker';
+import { applyCouponAction, changeCartUnitAction, checkoutAction, clearCartAction, removeCouponAction, restoreCartLineAction, selectPromotionAction, updateCartQtyAction } from '../actions';
 
 export const metadata: Metadata = { title: 'ตะกร้าและสั่งซื้อ' };
 
@@ -44,13 +45,18 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
     // Same cap as checkout: the line after its cash discount, so both payment methods show the same freight discount.
     .map((l) => ({ ...l, freightOff: freightDiscountOf(freightRates, l.product, l.item.qty, l.item.unitId, l.item.qty * (l.unit - l.cashOff)) }));
   const billLines = lines.map((l) => ({ qty: l.item.qty, unitPrice: l.unit, cashDiscountPerUnit: l.cashOff, freightDiscount: l.freightOff, vatRate: l.product.vatRate, vatIncluded: l.product.vatIncluded }));
-  const couponCode = await getCartCoupon(sid);
-  const coupon = couponCode && lines.length
-    ? await checkCartCoupon(couponCode, catalog, profile, lines.map((l) => ({ product: l.product, qty: l.item.qty, unitPrice: l.unit, cashDiscountPerUnit: l.cashOff })), profile.credit ? ['CREDIT', 'CASH'] : ['CASH'])
-    : {};
+  const [couponCode, promotionPick] = await Promise.all([getCartCoupon(sid), getCartPromotion(sid)]);
+  const priced = lines.map((l) => ({ product: l.product, qty: l.item.qty, unitPrice: l.unit, cashDiscountPerUnit: l.cashOff }));
+  const methods: ('CREDIT' | 'CASH')[] = profile.credit ? ['CREDIT', 'CASH'] : ['CASH'];
+  const [coupon, promotions] = await Promise.all([
+    couponCode && lines.length ? checkCartCoupon(couponCode, catalog, profile, priced, methods) : Promise.resolve({} as Awaited<ReturnType<typeof checkCartCoupon>>),
+    lines.length ? checkCartPromotions(catalog, profile, priced, methods, promotionPick) : Promise.resolve({} as Awaited<ReturnType<typeof checkCartPromotions>>),
+  ]);
   const couponOff = (method: 'CREDIT' | 'CASH') => { const r = coupon[method]; return r?.ok ? r.discount : 0; };
-  const creditBill = withCoupon(billTotals(billLines, 'CREDIT'), couponOff('CREDIT'));
-  const cashBill = withCoupon(billTotals(billLines, 'CASH'), couponOff('CASH'));
+  const promotionOff = (method: 'CREDIT' | 'CASH') => promotions[method]?.selected?.discount ?? 0;
+  const creditBill = withPromotion(withCoupon(billTotals(billLines, 'CREDIT'), couponOff('CREDIT')), promotionOff('CREDIT'));
+  const cashBill = withPromotion(withCoupon(billTotals(billLines, 'CASH'), couponOff('CASH')), promotionOff('CASH'));
+  const shownPromotions = promotions[methods[0]];
   const cashPercent = uniformCashPercent(lines.map((l) => ({ cashDiscountPerUnit: l.cashOff, cashDiscountPercent: l.cashPercent })));
   const couponResult = coupon[profile.credit ? 'CREDIT' : 'CASH'] ?? coupon.CASH;
   // Live: the tighter of the web limit and Odoo's credit_limit; Odoo unreachable leaves only the web limit.
@@ -138,6 +144,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
       </div>
 
       <div className="space-y-3 lg:sticky lg:top-24">
+      <PromotionPicker promotions={shownPromotions} action={selectPromotionAction} amountNote={profile.credit ? 'ยอดลดแสดงตามราคาเครดิต จ่ายเงินสดคิดจากราคาหลังหักส่วนลดเงินสด' : null} />
       <div className="space-y-2 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">โค้ดส่วนลด / คูปอง</h2>
         {couponCode ? (

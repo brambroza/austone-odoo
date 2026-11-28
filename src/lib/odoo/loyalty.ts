@@ -5,6 +5,7 @@
  * Odoo stays the source of truth.
  */
 import type { CouponDefinition, CouponReward, CouponRule } from '@/lib/shop/coupon';
+import type { PromotionDefinition, PromotionReward, PromotionRule } from '@/lib/shop/promotion';
 import { odooSearchRead, odooRead, odooWrite } from './rpc';
 
 type Rel = [number, string] | false;
@@ -13,9 +14,14 @@ type RawProgram = {
   date_from: string | false; date_to: string | false; pricelist_ids: number[];
   limit_usage: boolean; max_usage: number; total_order_count: number;
 };
+/**
+ * `any_product` / `valid_product_ids` exist up to Odoo 18 only; Odoo 19 dropped them (a rule with no
+ * product, category, tag or domain counts every product), so they are never requested.
+ */
 type RawRule = {
-  id: number; mode: 'auto' | 'with_code'; code: string | false; minimum_amount: number; minimum_qty: number; any_product: boolean;
-  valid_product_ids: number[]; product_ids: number[]; product_category_id: Rel; product_tag_id: Rel; product_domain: string | false;
+  id: number; mode: 'auto' | 'with_code'; code: string | false; minimum_amount: number; minimum_qty: number; any_product?: boolean;
+  valid_product_ids?: number[]; product_ids: number[]; product_category_id: Rel; product_tag_id: Rel; product_domain: string | false;
+  reward_point_amount?: number; reward_point_mode?: PromotionRule['pointMode'];
 };
 type RawReward = {
   id: number; reward_type: CouponReward['type']; description: string | false; discount: number; discount_mode: CouponReward['mode'];
@@ -25,7 +31,7 @@ type RawReward = {
 type RawCard = { id: number; program_id: Rel; code: string; points: number; expiration_date: string | false; partner_id: Rel; active: boolean };
 
 const PROGRAM_FIELDS = ['name', 'program_type', 'trigger', 'active', 'date_from', 'date_to', 'pricelist_ids', 'limit_usage', 'max_usage', 'total_order_count'];
-const RULE_FIELDS = ['mode', 'code', 'minimum_amount', 'minimum_qty', 'any_product', 'valid_product_ids', 'product_ids', 'product_category_id', 'product_tag_id', 'product_domain'];
+const RULE_FIELDS = ['mode', 'code', 'minimum_amount', 'minimum_qty', 'product_ids', 'product_category_id', 'product_tag_id', 'product_domain', 'reward_point_amount', 'reward_point_mode'];
 const REWARD_FIELDS = ['reward_type', 'description', 'discount', 'discount_mode', 'discount_applicability', 'discount_max_amount', 'required_points',
   'all_discount_product_ids', 'discount_product_ids', 'discount_product_category_id', 'discount_product_tag_id', 'discount_product_domain'];
 const COUPON_CARD_TYPES = ['coupons', 'next_order_coupons'];
@@ -42,10 +48,37 @@ const customDomain = (value: string | false): boolean => Boolean(value && value.
  * one; otherwise the explicit products and category. A tag or custom domain without a
  * computed list cannot be checked on the web.
  */
-function productScope(computed: number[], explicit: number[], category: Rel, tag: Rel, domain: string | false) {
+function productScope(computed: number[] | undefined, explicit: number[], category: Rel, tag: Rel, domain: string | false) {
   const productIds = [...new Set([...(computed ?? []), ...(explicit ?? [])])];
   const unsupported = !(computed ?? []).length && Boolean(tag || customDomain(domain));
   return { productIds, categoryId: relId(category), unsupported };
+}
+
+/** Rule conditions as the evaluators see them. No product filter at all = any product (Odoo 19). */
+function toRule(r: RawRule): CouponRule {
+  const anyProduct = r.any_product ?? (!(r.product_ids ?? []).length && !r.product_category_id && !r.product_tag_id && !customDomain(r.product_domain));
+  return {
+    minimumAmount: r.minimum_amount ?? 0,
+    minimumQty: r.minimum_qty ?? 0,
+    anyProduct,
+    ...(anyProduct ? { productIds: [], categoryId: null, unsupported: false } : productScope(r.valid_product_ids, r.product_ids, r.product_category_id, r.product_tag_id, r.product_domain)),
+  };
+}
+
+/** Reward as the evaluators see it. */
+function toReward(r: RawReward): CouponReward {
+  return {
+    type: r.reward_type,
+    description: r.description || '',
+    discount: r.discount ?? 0,
+    mode: r.discount_mode,
+    applicability: r.discount_applicability,
+    maxAmount: r.discount_max_amount ?? 0,
+    ...(r.discount_applicability === 'specific'
+      ? productScope(r.all_discount_product_ids, r.discount_product_ids, r.discount_product_category_id, r.discount_product_tag_id, r.discount_product_domain)
+      : { productIds: [], categoryId: null, unsupported: false }),
+    requiredPoints: r.required_points ?? 0,
+  };
 }
 
 /** Shapes Odoo rows into the evaluator's definition. `codeRuleId` limits code rules to the one that matched. */
@@ -66,24 +99,8 @@ export function toDefinition(code: string, program: RawProgram, rules: RawRule[]
     maxUsage: program.max_usage ?? 0,
     usedCount: program.total_order_count ?? 0,
     card: card ? { points: card.points, expirationDate: text(card.expiration_date), partnerId: relId(card.partner_id), active: card.active } : null,
-    rules: usable.map((r): CouponRule => ({
-      minimumAmount: r.minimum_amount ?? 0,
-      minimumQty: r.minimum_qty ?? 0,
-      anyProduct: r.any_product,
-      ...(r.any_product ? { productIds: [], categoryId: null, unsupported: false } : productScope(r.valid_product_ids, r.product_ids, r.product_category_id, r.product_tag_id, r.product_domain)),
-    })),
-    rewards: rewards.map((r): CouponReward => ({
-      type: r.reward_type,
-      description: r.description || '',
-      discount: r.discount ?? 0,
-      mode: r.discount_mode,
-      applicability: r.discount_applicability,
-      maxAmount: r.discount_max_amount ?? 0,
-      ...(r.discount_applicability === 'specific'
-        ? productScope(r.all_discount_product_ids, r.discount_product_ids, r.discount_product_category_id, r.discount_product_tag_id, r.discount_product_domain)
-        : { productIds: [], categoryId: null, unsupported: false }),
-      requiredPoints: r.required_points ?? 0,
-    })),
+    rules: usable.map(toRule),
+    rewards: rewards.map(toReward),
   };
 }
 
@@ -136,15 +153,20 @@ export async function listCodePrograms(): Promise<{ program: RawProgram; codes: 
   }));
 }
 
+/** Reward lines on a sale order matching `filter` (`is_reward_line` is not stored, so search on the reward link). */
+async function countRewardLines(saleOrderId: number, filter: unknown[]): Promise<number> {
+  return odooRead<number>('sale.order.line', 'search_count', [[['order_id', '=', saleOrderId], filter]]);
+}
+
 /**
  * Applies a code to a draft sale order with Odoo's `sale.loyalty.coupon.wizard`.
- * Skips when the order already has a reward line (safe to retry). Throws when Odoo
- * rejects the code or asks to choose between several rewards.
+ * Skips when the order already has a reward line of the code's program (`programId`; any
+ * reward line for orders from before it was stored), so it is safe to retry. Throws when
+ * Odoo rejects the code or asks to choose between several rewards.
  */
-export async function applyCouponToOrder(saleOrderId: number, code: string): Promise<void> {
-  // `is_reward_line` is not stored, so search on the reward link instead.
-  const rewardLines = await odooRead<number>('sale.order.line', 'search_count', [[['order_id', '=', saleOrderId], ['reward_id', '!=', false]]]);
-  if (rewardLines > 0) return;
+export async function applyCouponToOrder(saleOrderId: number, code: string, programId?: number): Promise<void> {
+  const existing = await countRewardLines(saleOrderId, programId ? ['reward_id.program_id', '=', programId] : ['reward_id', '!=', false]);
+  if (existing > 0) return;
   const created = await odooWrite<number | number[]>('sale.loyalty.coupon.wizard', 'create', [[{ order_id: saleOrderId, coupon_code: code }]]);
   const wizardId = Array.isArray(created) ? created[0] : created;
   const result = await odooWrite<unknown>('sale.loyalty.coupon.wizard', 'action_apply', [[wizardId]]);
@@ -250,4 +272,80 @@ export async function listProgramCards(programId: number, limit = 200) {
 export async function setProgramActive(programId: number, active: boolean): Promise<void> {
   await odooWrite<boolean>('loyalty.program', 'write', [[programId], { active }]);
   cache.clear();
+  promotionCache = null;
+}
+
+// ---------- automatic promotions ----------
+
+type RawPromotionReward = RawReward & {
+  program_id: Rel; reward_product_id: Rel; reward_product_ids: number[]; reward_product_qty: number; multi_product: boolean; reward_product_tag_id: Rel;
+};
+
+const PROMOTION_TYPES = ['promotion', 'buy_x_get_y'];
+const PROMOTION_REWARD_FIELDS = [...REWARD_FIELDS, 'program_id', 'reward_product_id', 'reward_product_ids', 'reward_product_qty', 'multi_product', 'reward_product_tag_id'];
+let promotionCache: { value: PromotionDefinition[]; expiresAt: number } | null = null;
+
+/** Shapes one Odoo automatic promotion for the cart evaluator. Exported for tests. */
+export function toPromotion(program: RawProgram, rules: (RawRule & { program_id: Rel })[], rewards: RawPromotionReward[]): PromotionDefinition {
+  return {
+    programId: program.id,
+    programName: program.name,
+    programType: program.program_type,
+    active: program.active,
+    dateFrom: text(program.date_from),
+    dateTo: text(program.date_to),
+    pricelistIds: program.pricelist_ids ?? [],
+    limitUsage: program.limit_usage,
+    maxUsage: program.max_usage ?? 0,
+    usedCount: program.total_order_count ?? 0,
+    // Code rules of a mixed program need the code typed in; only automatic rules count here.
+    rules: rules.filter((r) => relId(r.program_id) === program.id && r.mode === 'auto').map((r): PromotionRule => ({
+      ...toRule(r),
+      pointMode: r.reward_point_mode ?? 'order',
+      pointAmount: r.reward_point_amount ?? 1,
+    })),
+    rewards: rewards.filter((r) => relId(r.program_id) === program.id).map((r): PromotionReward => ({
+      ...toReward(r),
+      id: r.id,
+      freeProduct: r.reward_type === 'product' && r.reward_product_id ? { id: r.reward_product_id[0], name: r.reward_product_id[1], qty: r.reward_product_qty || 1 } : null,
+      multiProduct: r.reward_type === 'product' && (Boolean(r.multi_product) || (r.reward_product_ids ?? []).length > 1 || Boolean(r.reward_product_tag_id)),
+    })),
+  };
+}
+
+/** Active automatic promotions in Odoo (no code needed), cached for a minute. */
+export async function listPromotions(): Promise<PromotionDefinition[]> {
+  if (promotionCache && promotionCache.expiresAt > Date.now()) return promotionCache.value;
+  const programs = await odooSearchRead<RawProgram>('loyalty.program',
+    [['program_type', 'in', PROMOTION_TYPES], ['trigger', '=', 'auto'], ['active', '=', true]], PROGRAM_FIELDS, { order: 'sequence, id' });
+  let value: PromotionDefinition[] = [];
+  if (programs.length) {
+    const ids = programs.map((p) => p.id);
+    const [rules, rewards] = await Promise.all([
+      odooSearchRead<RawRule & { program_id: Rel }>('loyalty.rule', [['program_id', 'in', ids]], ['program_id', ...RULE_FIELDS]),
+      odooSearchRead<RawPromotionReward>('loyalty.reward', [['program_id', 'in', ids]], PROMOTION_REWARD_FIELDS),
+    ]);
+    value = programs.map((p) => toPromotion(p, rules, rewards));
+  }
+  promotionCache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+  return value;
+}
+
+/**
+ * Applies the promotion reward the dealer chose to a draft sale order, the way the "Promotions"
+ * button does in Odoo: `action_open_reward_wizard` computes the claimable rewards (and applies the
+ * only one when there is a single choice); otherwise the reward wizard applies `rewardId`.
+ * Skips when the order already has that reward line (safe to retry). Throws when Odoo does not
+ * give the reward, e.g. the order no longer meets its conditions in Odoo.
+ */
+export async function applyPromotionToOrder(saleOrderId: number, rewardId: number): Promise<void> {
+  if (await countRewardLines(saleOrderId, ['reward_id', '=', rewardId]) > 0) return;
+  const result = await odooWrite<unknown>('sale.order', 'action_open_reward_wizard', [[saleOrderId]]);
+  if (result && typeof result === 'object' && 'res_model' in result) {
+    const created = await odooWrite<number | number[]>('sale.loyalty.reward.wizard', 'create', [[{ order_id: saleOrderId, selected_reward_id: rewardId }]]);
+    await odooWrite<unknown>('sale.loyalty.reward.wizard', 'action_apply', [[Array.isArray(created) ? created[0] : created]]);
+  }
+  if (await countRewardLines(saleOrderId, ['reward_id', '=', rewardId]) === 0) {
+    throw new Error(`Odoo ไม่ให้โปรโมชันที่ร้านเลือก (reward #${rewardId}) กับใบสั่งขายนี้ ตรวจเงื่อนไขโปรในใบสั่งขายของ Odoo`);
+  }
 }

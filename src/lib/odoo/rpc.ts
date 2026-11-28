@@ -24,12 +24,15 @@ const READ_METHODS = new Set([
  * approved price books as pricelists, create / archive discount-code and coupon programs,
  * add / rename / publish / archive delivery methods, and post internal chatter notes (with the
  * dealer's slip attached) on sale orders and invoices when a credit payment is reported / checked.
+ * Automatic promotions the dealer chose are applied through Odoo's reward wizard.
  */
 const WRITE_METHODS: Record<string, ReadonlySet<string>> = {
   'res.partner': new Set(['create', 'write']),
   // `action_cancel`: admin cancels a web order whose SO already exists (web and Odoo stay in step).
-  'sale.order': new Set(['create', 'action_confirm', 'action_cancel', 'message_post']),
+  // `action_open_reward_wizard`: Odoo's "Promotions" button, to apply the automatic promotion the dealer chose.
+  'sale.order': new Set(['create', 'action_confirm', 'action_cancel', 'message_post', 'action_open_reward_wizard']),
   'sale.loyalty.coupon.wizard': new Set(['create', 'action_apply']),
+  'sale.loyalty.reward.wizard': new Set(['create', 'action_apply']),
   'sale.advance.payment.inv': new Set(['create', 'create_invoices']),
   'product.pricelist': new Set(['create']),
   'product.pricelist.item': new Set(['create', 'write', 'unlink']),

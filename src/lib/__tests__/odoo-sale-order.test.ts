@@ -92,6 +92,9 @@ describe('buildOrderNote', () => {
 
   it('includes the dealer PO number when given', () => {
     expect(buildOrderNote(sampleOrder({ poRef: 'PO-6811-023' }))).toContain('เลขที่ใบสั่งซื้อของร้าน: PO-6811-023');
+    const promotion = { rewardId: 6, programId: 4, programName: 'PCR กระเป๋า', label: 'แถม กระเป๋า × 2', discount: 0, freeProduct: { id: 228, name: 'กระเป๋า', qty: 2 } };
+    expect(buildOrderNote(sampleOrder({ promotion }))).toContain('โปรโมชัน: PCR กระเป๋า · แถม กระเป๋า × 2');
+    expect(buildOrderNote(sampleOrder({ promotion: { ...promotion, label: 'ลด 16%', freeProduct: null }, promotionDiscount: 900 }))).toContain('ลด 16% เว็บคำนวณส่วนลด 900.00 บาท');
   });
 });
 
@@ -184,6 +187,24 @@ describe('pushOrderToOdoo', () => {
     expect(rpc.odooWrite.mock.calls).toEqual([['sale.order', 'action_confirm', [[77]]]]);
   });
 
+  it('applies the chosen promotion before the coupon, then confirms', async () => {
+    const coupon = { code: 'TIRE500', programId: 9, programName: 'ลด 500', label: 'ลด ฿500', discount: 500 };
+    const promotion = { rewardId: 8, programId: 8, programName: 'PCR 40 เส้นขึ้นไป', label: 'ลด 16%', discount: 900, freeProduct: null };
+    rpc.odooSearchRead
+      .mockResolvedValueOnce([{ id: 77, name: 'S00077', state: 'draft', amount_total: 5990.2 }])
+      .mockResolvedValueOnce([{ id: 77, name: 'S00077', state: 'sale', amount_total: 4590.2, invoice_ids: [55] }])
+      .mockResolvedValueOnce([{ id: 55, name: false, state: 'draft' }]);
+    rpc.odooRead.mockResolvedValueOnce(0).mockResolvedValueOnce(1).mockResolvedValueOnce(0); // promotion: none yet, then applied; coupon: none yet
+    rpc.odooWrite.mockResolvedValueOnce({ res_model: 'sale.loyalty.reward.wizard' }).mockResolvedValueOnce(41).mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(5).mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+    const result = await pushOrderToOdoo(sampleOrder({ coupon, couponDiscount: 500, promotion, promotionDiscount: 900, total: 4590.2 }), 900);
+    expect(rpc.odooWrite.mock.calls.map((c) => `${c[0]}.${c[1]}`)).toEqual([
+      'sale.order.action_open_reward_wizard', 'sale.loyalty.reward.wizard.create', 'sale.loyalty.reward.wizard.action_apply',
+      'sale.loyalty.coupon.wizard.create', 'sale.loyalty.coupon.wizard.action_apply', 'sale.order.action_confirm',
+    ]);
+    expect(result.status).toBe('SYNCED');
+  });
+
   it('fails (SO stays draft) when Odoo asks to pick between rewards', async () => {
     const coupon = { code: 'MULTI', programId: 9, programName: 'x', label: 'x', discount: 10 };
     rpc.odooSearchRead.mockResolvedValueOnce([{ id: 77, name: 'S00077', state: 'draft', amount_total: 5990.2 }]);
@@ -239,7 +260,7 @@ describe('freight discount', () => {
     { productId: 3, name: 'MC', code: 'c', size: null, qty: 20, unitPrice: 200, cashDiscountPerUnit: 0, taxIds: [5] },
   ];
 
-  it('sends one negative line per tax set with the delivery method name, on credit too', () => {
+  it('falls back to its own product (with the delivery method name) when no cash discount product is set', () => {
     const out = buildOrderLines({ lines, paymentMethod: 'CREDIT', ref: 'WEB-2', carrier: 'รถบริษัท' }, null, freight);
     expect(out.slice(0, 3).map((l) => l.price_unit)).toEqual([5000, 2000, 200]);
     expect(out.slice(3)).toEqual([{ product_id: 777, name: 'ส่วนลดค่าขนส่ง รถบริษัท (ออเดอร์เว็บ WEB-2)', product_uom_qty: 1, price_unit: -920, tax_ids: [[6, 0, [5]]] }]);
@@ -248,6 +269,28 @@ describe('freight discount', () => {
   it('folds the freight discount into prices when its Odoo product is not set', () => {
     const out = buildOrderLines({ lines, paymentMethod: 'CREDIT', ref: 'WEB-2' });
     expect(out.map((l) => l.price_unit)).toEqual([4850, 1920, 200]);
+  });
+
+  it('goes into the cash discount line when the cash discount product is set (one line, on credit too)', () => {
+    const cash = { productId: 999, taxField: 'tax_ids' };
+    const out = buildOrderLines({ lines, paymentMethod: 'CREDIT', ref: 'WEB-2', carrier: 'รถบริษัท' }, cash, freight);
+    expect(out.slice(0, 3).map((l) => l.price_unit)).toEqual([5000, 2000, 200]);
+    expect(out.slice(3)).toEqual([{ product_id: 999, name: 'ส่วนลดเงินสด (ออเดอร์เว็บ WEB-2)', product_uom_qty: 1, price_unit: -920, tax_ids: [[6, 0, [5]]] }]);
+  });
+
+  it('adds the freight discount to the cash discount amount of the same tax set on cash orders', () => {
+    const cash = { productId: 999, taxField: 'tax_ids' };
+    const withCash = lines.map((l) => ({ ...l, cashDiscountPerUnit: l.productId === 3 ? 4 : 0, cashDiscountPercent: 2 }));
+    const out = buildOrderLines({ lines: withCash, paymentMethod: 'CASH', ref: 'WEB-3' }, cash, freight);
+    expect(out.slice(3)).toEqual([{ product_id: 999, name: 'ส่วนลดเงินสด (ออเดอร์เว็บ WEB-3)', product_uom_qty: 1, price_unit: -1000, tax_ids: [[6, 0, [5]]] }]);
+    const sum = out.reduce((acc, l) => acc + (l.product_uom_qty as number) * (l.price_unit as number), 0);
+    expect(sum).toBe(32000 - 1000);
+  });
+
+  it('folds both into prices when a discounted line has no stored taxes, even with the cash product set', () => {
+    const cash = { productId: 999, taxField: 'tax_ids' };
+    const old = [{ ...lines[0], taxIds: undefined }];
+    expect(buildOrderLines({ lines: old, paymentMethod: 'CREDIT', ref: 'WEB-2' }, cash, freight)).toEqual([{ product_id: 1, product_uom_qty: 4, price_unit: 4850 }]);
   });
 
   it('notes the freight discount on the SO', () => {

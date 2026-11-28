@@ -113,6 +113,14 @@ describe('lineCommission', () => {
     expect(rateLabel({ kind: 'PER_UNIT', value: 15 })).toBe('฿15/หน่วย');
   });
 
+  it('falls back to a catch-all Default rate only when nothing more specific matches', () => {
+    const rates = [rate({ id: 'def', brand: '*', family: '*', priceGroup: '*', value: 0.2 }), ...RATES];
+    const other = lineCommission(line({ brand: 'X', base: 10_000, overdueDays: 12 }), { rates, steps: STEPS }, undefined);
+    expect(other.rateId).toBe('def');
+    expect(other.commission).toBeCloseTo(20, 6);
+    expect(lineCommission(line({ overdueDays: 12 }), { rates, steps: STEPS }, PRICELISTS[0]).rateId).not.toBe('def');
+  });
+
   it('pays a percent of the amount including VAT', () => {
     const gross = [rate({ kind: 'PERCENT_GROSS', value: 1, priceGroup: '*' })];
     // base 10,000 + VAT 7% = 10,700 → 1% = 107

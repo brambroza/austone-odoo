@@ -15,11 +15,13 @@ import { fetchCategories, fetchPricelists, searchProducts } from '@/lib/commissi
 import { periodDates, thaiDay, todayBangkok } from '@/lib/commission/period';
 import { listPricelists, listRates } from '@/lib/commission/repo';
 import { tryClientFor } from '@/lib/commission/service';
-import { PRICE_GROUP_LABELS, type PriceGroup } from '@/lib/commission/types';
+import { PRICE_GROUP_LABELS, type CommissionRate, type PriceGroup } from '@/lib/commission/types';
 import { createRateAction, endOrDeleteRateAction, seedDefaultsAction, updateRateAction } from '../actions';
 import { DatePicker } from '@/components/ui/date-picker';
 
 const PATH = '/admin/commission/rates';
+/** A catch-all rate (any brand, family and pricelist, no product): used only when no more specific rate matches. */
+const isDefaultRate = (r: CommissionRate) => r.brand === '*' && r.family === '*' && r.priceGroup === '*' && !r.odooPricelistId && !r.odooProductId;
 const label = 'block text-xs font-medium';
 const input = 'mt-1 h-9 w-full rounded-lg border border-border bg-background px-2 text-sm font-normal';
 type Search = { source?: string; period?: string; pq?: string; pid?: string; pname?: string; edit?: string; all?: string; saved?: string; error?: string };
@@ -104,6 +106,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
                 {visible.map((r) => (
                   <TableRow key={r.id} className={isValidOn(r, today) ? undefined : 'opacity-60'}>
                     <TableCell data-label="ใช้กับ" className="whitespace-normal">
+                      {isDefaultRate(r) && <Badge className="mr-1">Default</Badge>}
                       {r.odooProductId ? <><Badge variant="outline">รายสินค้า</Badge> {r.productName ?? `#${r.odooProductId}`}</> : <span className="font-medium">{r.brand === '*' && r.family === '*' ? 'ทุกหมวดสินค้า' : `${r.brand === '*' ? 'ทุกยี่ห้อ' : r.brand}${r.family === '*' ? (r.brand === '*' ? '' : ' (ทุกกลุ่ม)') : `-${r.family}`}`}</span>}
                     </TableCell>
                     <TableCell data-label="กลุ่มราคา" className="whitespace-normal">
@@ -210,7 +213,7 @@ export default async function CommissionRatesPage({ searchParams }: { searchPara
             </form>
             <datalist id="brand-list">{brands.map((b) => <option key={b} value={b} />)}</datalist>
             <datalist id="family-list">{families.map((f) => <option key={f} value={f} />)}</datalist>
-            <p className="mt-3 text-xs text-muted-foreground">หมวดสินค้าอ่านจาก product category ใน Odoo แบบ <code>ยี่ห้อ-กลุ่ม</code> เช่น AT-PCR (Austone), TM-WH (กระทะล้อ) · เลือก “ทุกยี่ห้อ-PCR” ถ้าอัตราเดียวกันทุกยี่ห้อ · วันที่มีผลเทียบกับวันที่เงินเข้า</p>
+            <p className="mt-3 text-xs text-muted-foreground">หมวดสินค้าอ่านจาก product category ใน Odoo แบบ <code>ยี่ห้อ-กลุ่ม</code> เช่น AT-PCR (Austone), TM-WH (กระทะล้อ) · เลือก “ทุกยี่ห้อ-PCR” ถ้าอัตราเดียวกันทุกยี่ห้อ · อัตรา Default = เลือก “ทุกหมวดสินค้า” + “ทุก pricelist” ใช้กับสินค้าที่ไม่ตรงอัตราไหนเลย (อัตราที่เจาะจงกว่าชนะเสมอ) · วันที่มีผลเทียบกับวันที่ออกใบแจ้งหนี้ (ไม่ใช่วันที่เงินเข้า) · ขั้นบันไดเกินดิวยังเทียบกับวันที่เงินเข้า</p>
           </section>
         </>
       )}

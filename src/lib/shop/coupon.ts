@@ -67,7 +67,7 @@ export type CouponResult =
   | { ok: true; discount: number; label: string; programId: number; programName: string }
   | { ok: false; reason: string };
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+export const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Normalizes what a dealer typed: trims spaces; Odoo compares codes exactly, so case is kept. */
 export function normalizeCode(raw: string): string {
@@ -94,7 +94,7 @@ function programProblem(def: CouponDefinition, ctx: CouponContext): string | nul
 }
 
 /** Whether a line's product is in a product list or under a category. */
-function inScope(line: CouponLine, productIds: number[], categoryId: number | null): boolean {
+export function inScope(line: CouponLine, productIds: number[], categoryId: number | null): boolean {
   return productIds.includes(line.productId) || (categoryId !== null && line.categoryIds.includes(categoryId));
 }
 
@@ -111,7 +111,7 @@ function rulesMet(rules: CouponRule[], lines: CouponLine[]): { ok: boolean; mini
 }
 
 /** Amount the reward is computed on. */
-function discountBase(reward: CouponReward, lines: CouponLine[]): number {
+export function discountBase(reward: CouponReward, lines: CouponLine[]): number {
   if (reward.applicability === 'specific') return lines.filter((l) => inScope(l, reward.productIds, reward.categoryId)).reduce((sum, l) => sum + l.amount, 0);
   if (reward.applicability === 'cheapest') {
     const units = lines.filter((l) => l.qty > 0).map((l) => l.amount / l.qty);

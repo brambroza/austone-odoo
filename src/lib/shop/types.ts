@@ -156,6 +156,13 @@ export type OrderLine = {
 
 export type OrderCoupon = { code: string; programId: number; programName: string; label: string; discount: number };
 
+/** Odoo automatic promotion the dealer picked: the reward applied on the SO and what the web computed for it. */
+export type OrderPromotion = {
+  rewardId: number; programId: number; programName: string; label: string; discount: number;
+  /** Free-product reward: Odoo adds this product at 100% discount. */
+  freeProduct: { id: number; name: string; qty: number } | null;
+};
+
 export type CreditPaymentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 export const CREDIT_PAYMENT_STATUS_LABELS: Record<CreditPaymentStatus, string> = { PENDING: 'รอตรวจ', VERIFIED: 'ตรวจแล้ว', REJECTED: 'ไม่ผ่าน' };
@@ -235,7 +242,11 @@ export type ProtoOrder = {
   coupon?: OrderCoupon | null;
   /** Discount from `coupon` (0 when none). */
   couponDiscount: number;
-  /** Amount due = subtotal − cashDiscount − freightDiscount − couponDiscount (+ VAT added on top). */
+  /** Odoo automatic promotion picked for this order (absent/null = none). */
+  promotion?: OrderPromotion | null;
+  /** Discount from `promotion` (absent/0 = none, or a free-product reward). */
+  promotionDiscount?: number;
+  /** Amount due = subtotal − cashDiscount − freightDiscount − couponDiscount − promotionDiscount (+ VAT added on top). */
   total: number;
   /** Odoo pricelist of the published price book the dealer bought from; set on the SO so Odoo recomputes with web prices. */
   odooPricelistId?: number | null;

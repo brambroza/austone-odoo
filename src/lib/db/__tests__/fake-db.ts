@@ -111,12 +111,12 @@ export function createFakeDb() {
     seq += 1;
     const now = nowSql();
     const row: Row = {
-      ...order, poRef: order.poRef || null, note: order.note ?? '', coupon: order.coupon ?? null, odooPricelistId: order.odooPricelistId ?? null,
+      ...order, poRef: order.poRef || null, note: order.note ?? '', coupon: order.coupon ?? null, promotion: order.promotion ?? null, promotionDiscount: order.promotionDiscount ?? 0, odooPricelistId: order.odooPricelistId ?? null,
       ref: `WEB-${now.slice(0, 10).replace(/-/g, '')}-${String(seq).padStart(3, '0')}`, status: 'PENDING', trackingRef: null, odoo: null,
       payment: { slipFile: null, slipUploadedAt: null, verifiedAt: null }, events: [{ status: 'PENDING', at: `${now}Z` }], createdAt: now, updatedAt: now,
     };
     table('ShopOrder').push(row);
-    Object.assign(cart, { items: [], couponCode: null });
+    Object.assign(cart, { items: [], couponCode: null, promotionRewardId: null });
     return { data: clone(row), error: null };
   };
 

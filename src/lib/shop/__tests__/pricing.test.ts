@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceBook } from '@/lib/admin/types';
 import type { Catalog } from '../catalog';
-import { billTotals, cashDiscountPerUnit, cashPercentOf, cashRuleOf, orderPricelistId, priceFromBook, resolvePrice, uniformCashPercent, vatLabel, withCoupon } from '../pricing';
+import { billTotals, cashDiscountPerUnit, cashPercentOf, cashRuleOf, orderPricelistId, priceFromBook, resolvePrice, uniformCashPercent, vatLabel, withCoupon, withPromotion } from '../pricing';
 import { vatFromTaxes } from '../catalog';
 import type { CatalogProduct, DealerProfile } from '../types';
 import type { PricelistItem } from '../price-engine';
@@ -40,8 +40,8 @@ describe('cash discount for credit dealers', () => {
   it('is the credit − cash price difference per unit', () => {
     expect(cashDiscountPerUnit(ctxCatalog, product, creditDealer)).toBe(120);
   });
-  it('is zero for non-credit dealers or without a paired cash pricelist', () => {
-    expect(cashDiscountPerUnit(ctxCatalog, product, { ...creditDealer, credit: false })).toBe(0);
+  it('applies to cash-only dealers too, and is zero without a paired cash pricelist', () => {
+    expect(cashDiscountPerUnit(ctxCatalog, product, { ...creditDealer, credit: false })).toBe(120);
     expect(cashDiscountPerUnit(ctxCatalog, product, { ...creditDealer, cashPricelistId: null })).toBe(0);
   });
   it('never goes negative when cash is dearer than credit', () => {
@@ -99,9 +99,11 @@ describe('cash discount %', () => {
     expect(cashPercentOf({ ...credit, cashPercent: 2, typePricelists: { CAR: 20 } }, product)).toBeNull();
     expect(cashPercentOf({ ...credit, cashPercent: 2, typePricelists: { CAR: 20 }, typeCashPercents: { CAR: 1.5 } }, product)).toBe(1.5);
   });
-  it('gives non-credit dealers nothing', () => {
-    expect(cashDiscountPerUnit(catalog, product, { ...profile, cashPercent: 2, dealerCashPercents: { CAR: 3 }, productCashDiscounts: { '777': { kind: 'PERCENT', value: 5 } } })).toBe(0);
-    expect(cashRuleOf({ ...profile, cashPercent: 2 }, product)).toBeNull();
+  it('gives cash-only (non-credit) dealers the same cash discount', () => {
+    expect(cashDiscountPerUnit(catalog, product, { ...profile, cashPercent: 2, dealerCashPercents: { CAR: 3 }, productCashDiscounts: { '777': { kind: 'PERCENT', value: 5 } } })).toBe(72); // dealer 3% wins
+    expect(cashDiscountPerUnit(catalog, product, { ...profile, productCashDiscounts: { '777': { kind: 'BAHT', value: 150 } } })).toBe(150);
+    expect(cashRuleOf({ ...profile, cashPercent: 2 }, product)).toEqual({ kind: 'PERCENT', value: 2, source: 'PRICELIST' });
+    expect(cashDiscountPerUnit(catalog, product, profile)).toBe(0); // nothing set
   });
   it('labels a single shared %', () => {
     expect(uniformCashPercent([{ cashDiscountPerUnit: 48, cashDiscountPercent: 2 }, { cashDiscountPerUnit: 0 }])).toBe(2);
@@ -128,6 +130,14 @@ describe('withCoupon', () => {
     expect(withCoupon({ subtotal: 1000, cashDiscount: 100, total: 900 }, 50)).toEqual({ subtotal: 1000, cashDiscount: 100, couponDiscount: 50, total: 850 });
     expect(withCoupon({ subtotal: 100, cashDiscount: 0, total: 100 }, 500)).toMatchObject({ couponDiscount: 100, total: 0 });
     expect(withCoupon({ subtotal: 100, cashDiscount: 0, total: 100 }, -5)).toMatchObject({ couponDiscount: 0, total: 100 });
+  });
+});
+
+describe('withPromotion', () => {
+  it('stacks with a coupon, keeps the coupon amount and shrinks the VAT inside', () => {
+    const bill = withPromotion(withCoupon({ subtotal: 1070, cashDiscount: 0, vat: 70, total: 1070 }, 70), 100);
+    expect(bill).toEqual({ subtotal: 1070, cashDiscount: 0, couponDiscount: 70, promotionDiscount: 100, vat: 58.88, total: 900 });
+    expect(withPromotion({ subtotal: 100, total: 100 }, 500)).toMatchObject({ promotionDiscount: 100, total: 0 });
   });
 });
 
